@@ -39,6 +39,9 @@ jobs:
           cp -r games _site/
           touch _site/.nojekyll
 
+      - name: 検索エンジンに載らないようにする
+        run: node scripts/add-noindex.mjs _site
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
