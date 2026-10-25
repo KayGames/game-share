@@ -1,0 +1,2077 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>FROST FRONTIER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@500;600&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* Layout: full-bleed canvas world; HUD panels pinned to the four screen edges like a field journal clipped to a map */
+:root{
+  --night:#0b1520; --panel:rgba(11,21,31,.86); --panel-solid:#0f1c29; --raise:#172838;
+  --line:rgba(170,204,230,.18); --line-strong:rgba(170,204,230,.36);
+  --text:#e7eff5; --dim:#90a6b8; --ember:#f2913f; --ember-deep:#b9531d; --frost:#8fd0f5;
+  --good:#86d68f; --bad:#ff6f5e; --warn:#ffd25e;
+  --f-display:'Dela Gothic One','Hiragino Kaku Gothic StdN','Yu Gothic',sans-serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',sans-serif;
+  --f-num:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;overflow:hidden}
+body{background:var(--night);color:var(--text);font-family:var(--f-body);font-size:13px;line-height:1.5;-webkit-user-select:none;user-select:none}
+#cv{position:fixed;inset:0;display:block;cursor:crosshair}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+button{font-family:var(--f-body);font-size:13px;color:var(--text);background:var(--raise);border:1px solid var(--line-strong);border-radius:6px;padding:6px 10px;cursor:pointer;text-align:left}
+button:hover:not(:disabled){border-color:var(--ember);background:#1f3346}
+button:focus-visible{outline:2px solid var(--frost);outline-offset:2px}
+button:disabled{opacity:.42;cursor:not-allowed}
+button.on{border-color:var(--ember);box-shadow:inset 0 0 0 1px var(--ember)}
+kbd{font-family:var(--f-num);font-size:11px;padding:0 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;color:var(--dim);margin-left:4px}
+.hud{position:fixed;pointer-events:none;z-index:5}
+.hud .panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;backdrop-filter:blur(4px)}
+/* top bar */
+#top{top:calc(8px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));right:calc(8px + env(safe-area-inset-right,0px));display:flex;justify-content:center}
+#top .panel{display:flex;flex-wrap:wrap;gap:4px 14px;padding:6px 14px;align-items:center}
+.chip{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.chip .k{color:var(--dim);font-size:12px}
+.chip .v{font-family:var(--f-num);font-weight:600;font-size:14px}
+.chip .cap{color:var(--dim);font-family:var(--f-num);font-size:11px}
+.sep{width:1px;height:18px;background:var(--line)}
+/* left objectives */
+#left{top:calc(58px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));width:252px}
+#left .panel{padding:12px 14px}
+.stage-tag{font-family:var(--f-num);font-size:11px;color:var(--ember);letter-spacing:.12em}
+.stage-name{font-family:var(--f-display);font-size:17px;line-height:1.3;margin:2px 0 8px;text-wrap:balance}
+#objs{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+#objs li{display:grid;grid-template-columns:16px 1fr auto;gap:6px;align-items:start;font-size:12.5px}
+#objs li .box{width:12px;height:12px;border:1.5px solid var(--dim);border-radius:3px;margin-top:3px}
+#objs li.done{color:var(--dim)}
+#objs li.done .box{background:var(--good);border-color:var(--good)}
+#objs li .pr{font-family:var(--f-num);font-size:11.5px;color:var(--dim);white-space:nowrap}
+#objs li .note{grid-column:2/4;font-size:11px;color:var(--dim);margin-top:-3px}
+#cond{margin-top:8px;font-size:11.5px;color:var(--dim);border-top:1px dashed var(--line);padding-top:6px}
+/* right menu */
+#right{top:calc(58px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));width:212px}
+#right .panel{padding:10px;display:grid;gap:6px}
+.mh{font-size:11px;color:var(--dim);letter-spacing:.14em;margin-top:4px}
+.mbtn{display:grid;grid-template-columns:1fr auto;gap:2px 6px;width:100%;padding:6px 9px}
+.mbtn .c{font-family:var(--f-num);font-size:11.5px;color:var(--warn)}
+.mbtn .d{grid-column:1/3;font-size:10.5px;color:var(--dim);line-height:1.35}
+/* bottom */
+#bottom{bottom:calc(8px + env(safe-area-inset-bottom,0px));left:calc(8px + env(safe-area-inset-left,0px));right:calc(8px + env(safe-area-inset-right,0px));display:flex;justify-content:center}
+#bottom .panel{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding:8px 14px;max-width:100%}
+.hpbar{width:180px;height:12px;border-radius:6px;background:#2a1a1a;overflow:hidden;border:1px solid var(--line)}
+.hpbar i{display:block;height:100%;background:linear-gradient(90deg,#e0503f,#ff8a5c);transition:width .15s}
+.guide{font-size:11.5px;color:var(--dim);display:flex;flex-wrap:wrap;gap:2px 10px}
+#ctxhint{color:var(--warn);font-size:12px;min-width:120px}
+/* hint + banners */
+#hint{top:calc(56px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);max-width:min(520px,calc(100vw - 560px));min-width:240px}
+#hint .panel{padding:8px 14px;border-color:rgba(242,145,63,.5);font-size:13px}
+#hint .panel b{color:var(--ember);font-weight:700;margin-right:6px}
+#banners{top:calc(110px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:grid;gap:6px;justify-items:center}
+.banner{pointer-events:none;padding:8px 18px;border-radius:6px;font-family:var(--f-display);font-size:16px;letter-spacing:.04em;background:rgba(11,21,31,.9);border:1px solid var(--line-strong);animation:bin .25s ease-out}
+.banner.bad{border-color:var(--bad);color:#ffd6cf;background:rgba(70,16,12,.9)}
+.banner.good{border-color:var(--good);color:#dff7e1}
+@keyframes bin{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+#boss{top:calc(150px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:min(460px,60vw);text-align:center}
+#boss .name{font-family:var(--f-display);font-size:14px;color:#ffd6cf;margin-bottom:3px}
+#boss .bar{height:10px;border-radius:5px;background:#2a1414;border:1px solid var(--bad);overflow:hidden}
+#boss .bar i{display:block;height:100%;background:var(--bad)}
+#info{bottom:calc(64px + env(safe-area-inset-bottom,0px));right:calc(8px + env(safe-area-inset-right,0px));width:240px}
+#info .panel{padding:10px 12px;font-size:12px}
+#info h4{margin:0 0 4px;font-family:var(--f-display);font-weight:400;font-size:14px}
+#info .row{display:flex;justify-content:space-between;gap:8px;color:var(--dim)}
+#info .row span:last-child{color:var(--text);font-family:var(--f-num)}
+#tip{position:fixed;pointer-events:none;z-index:8;padding:5px 9px;border-radius:5px;background:rgba(11,21,31,.94);border:1px solid var(--line-strong);font-size:12px;white-space:nowrap}
+#tip .no{color:var(--bad)}
+/* overlays */
+.screen{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:radial-gradient(ellipse at 50% 120%,rgba(242,145,63,.22),transparent 60%),rgba(6,12,19,.78);overflow:auto}
+.card{background:var(--panel-solid);border:1px solid var(--line);border-radius:10px;padding:22px 24px;max-width:760px;width:100%}
+.title-big{font-family:var(--f-display);font-size:clamp(34px,7vw,64px);line-height:1;letter-spacing:.02em;margin:0;color:#f4f8fb;text-shadow:0 0 30px rgba(143,208,245,.25)}
+.title-big em{font-style:normal;color:var(--ember)}
+.sub{color:var(--dim);margin:8px 0 18px}
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.stg{display:grid;gap:4px;padding:12px 14px;border-radius:8px}
+.stg .no{font-family:var(--f-num);font-size:11px;color:var(--ember);letter-spacing:.12em}
+.stg .nm{font-family:var(--f-display);font-size:16px;line-height:1.3}
+.stg .th{font-size:12px;color:var(--dim)}
+.stg .ok{font-size:11px;color:var(--good)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 18px;margin-top:16px;font-size:12px;color:var(--dim)}
+.ctl b{color:var(--text);font-weight:500;font-family:var(--f-num);font-size:12px;display:inline-block;min-width:74px}
+.mobile-note{display:none;margin-top:12px;padding:8px 10px;border:1px dashed var(--warn);border-radius:6px;color:var(--warn);font-size:12px}
+@media (pointer:coarse){.mobile-note{display:block}.ctl{display:none}}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.actions button{padding:9px 16px;font-size:14px}
+.actions button.primary{background:var(--ember-deep);border-color:var(--ember)}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px}
+.statgrid div{background:var(--raise);border-radius:6px;padding:8px 10px}
+.statgrid .k{font-size:11px;color:var(--dim)}
+.statgrid .v{font-family:var(--f-num);font-size:18px;font-weight:600}
+h2.big{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,5vw,40px);margin:0}
+/* manage panel */
+#manage .card{max-width:520px}
+.rolerow{display:grid;grid-template-columns:12px 1fr auto auto auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.rolerow .dot{width:10px;height:10px;border-radius:50%}
+.rolerow .rn{font-weight:700}
+.rolerow .rd{display:block;font-size:11px;color:var(--dim);font-weight:500}
+.rolerow .cnt{font-family:var(--f-num);font-size:16px;min-width:26px;text-align:center}
+.rolerow button{padding:2px 10px;font-family:var(--f-num);font-size:15px}
+@media (max-width:1100px){#left{width:210px}#right{width:190px}#hint{max-width:calc(100vw - 440px)}}
+@media (max-width:760px){#left,#right{display:none}#hint{max-width:calc(100vw - 32px)}}
+@media (prefers-reduced-motion:reduce){.banner{animation:none}}
+/* ---- touch / phone ---- */
+#touchUI{position:fixed;inset:0;pointer-events:none;z-index:6}
+#touchUI button{pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.tb{position:fixed;border-radius:50%;display:grid;place-items:center;text-align:center;padding:0;font-weight:700;font-size:12px;line-height:1.15;background:rgba(11,21,31,.6);border:1.5px solid var(--line-strong);color:var(--text)}
+.tb.held{background:rgba(242,145,63,.35);border-color:var(--ember)}
+#tAtk{width:84px;height:84px;font-size:15px;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));border-color:var(--ember);border-width:2px}
+#tDodge{width:60px;height:60px;right:calc(112px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#tAct{width:62px;height:62px;right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(116px + env(safe-area-inset-bottom,0px));border-color:var(--warn)}
+#tEat{width:48px;height:48px;right:calc(108px + env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+#tWpn{width:48px;height:48px;right:calc(100px + env(safe-area-inset-right,0px));bottom:calc(146px + env(safe-area-inset-bottom,0px))}
+#stick{position:fixed;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;border:2px solid rgba(232,240,246,.32);background:rgba(11,21,31,.22);pointer-events:none;opacity:.55}
+#stick.on{opacity:1}
+#knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(232,240,246,.5);border:1.5px solid rgba(255,255,255,.6)}
+#tutil{left:calc(8px + env(safe-area-inset-left,0px));right:calc(8px + env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:6px}
+#tutil .tstat{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;background:var(--panel);border:1px solid var(--line);font-size:12px;pointer-events:none}
+#tutil .tstat .hpbar{width:84px;height:10px}
+#tutil .tstat .hpbar i{transition:none}
+#tutil button{pointer-events:auto;padding:7px 12px;font-size:13px;touch-action:manipulation;background:rgba(11,21,31,.78)}
+#tPlace{left:50%;transform:translateX(-50%);width:min(380px,calc(100vw - 16px))}
+#tPlace .panel{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-color:var(--warn)}
+#tPlace .panel span{flex:1 1 140px;min-width:0;font-size:12.5px}
+#tPlace button{touch-action:manipulation}
+#drawer{align-items:flex-start}
+.drawer-in{width:100%;max-width:620px;display:grid;gap:10px}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#drawerBody{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+#drawerBody .panel{background:var(--panel-solid);border:1px solid var(--line);border-radius:8px;padding:12px}
+#drawerBody #menu{display:grid;gap:6px}
+body.touch{touch-action:none}
+body.touch #left,body.touch #right{display:none}
+body.touch #top .panel{gap:1px 10px;padding:4px 10px}
+body.touch .chip .k{font-size:11px}
+body.touch .chip .v{font-size:12.5px}
+body.touch #bottom{display:none}
+body.touch #bottom .panel{gap:4px 12px;padding:6px 10px}
+body.touch #bottom .guide,body.touch #bottom .sep{display:none}
+body.touch .hpbar{width:110px}
+body.touch #hint{max-width:calc(100vw - 24px);min-width:0;width:max-content}
+body.touch #hint .panel{font-size:12px;padding:6px 10px}
+body.touch #info{bottom:auto;right:auto;left:calc(8px + env(safe-area-inset-left,0px));width:min(300px,calc(100vw - 16px))}
+body.touch #boss{width:min(420px,calc(100vw - 32px))}
+body.touch #cv{cursor:default}
+body.touch kbd{display:none}
+</style>
+
+<canvas id="cv"></canvas>
+
+<div class="hud" id="top" hidden><div class="panel" id="topPanel"></div></div>
+<div class="hud" id="left" hidden><div class="panel">
+  <div class="stage-tag" id="stTag">STAGE 1</div>
+  <div class="stage-name" id="stName">雪原の小さな火</div>
+  <ul id="objs"></ul>
+  <div id="cond" hidden></div>
+</div></div>
+<div class="hud" id="right" hidden><div class="panel" id="menu"></div></div>
+<div class="hud" id="bottom" hidden><div class="panel">
+  <div style="display:grid;gap:3px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)"><span>リーダーHP</span><span class="num" id="hpTxt">100/100</span></div>
+    <div class="hpbar"><i id="hpBar" style="width:100%"></i></div>
+  </div>
+  <div class="sep"></div>
+  <div style="display:grid;gap:1px;font-size:12px">
+    <div><span style="color:var(--dim)">武器</span> <span id="weapon">石斧</span></div>
+    <div><span style="color:var(--dim)">背負い袋</span> <span class="num" id="bag">0/30</span></div>
+  </div>
+  <div class="sep"></div>
+  <div id="ctxhint"></div>
+  <div class="guide"><span>WASD 移動</span><span>左クリック 攻撃・伐採</span><span>Space 回避</span><span>E 長押しで作業</span><span>Q 焼肉を食べる</span><span>B 拡張</span><span>Tab 住民</span><span>右クリック 情報</span><span>Esc 中断</span></div>
+</div></div>
+<div class="hud" id="hint" hidden><div class="panel" id="hintTxt"></div></div>
+<div class="hud" id="banners"></div>
+<div class="hud" id="boss" hidden><div class="name" id="bossName">部族の首長</div><div class="bar"><i id="bossBar" style="width:100%"></i></div></div>
+<div class="hud" id="info" hidden><div class="panel" id="infoBody"></div></div>
+<div id="tip" hidden></div>
+<div id="touchUI" hidden>
+  <div id="stick"><div id="knob"></div></div>
+  <button class="tb" id="tAtk" aria-label="攻撃">攻撃</button>
+  <button class="tb" id="tDodge" aria-label="回避">回避</button>
+  <button class="tb" id="tAct" aria-label="作業（長押し）">作業</button>
+  <button class="tb" id="tEat" aria-label="焼肉を食べる">食べる</button>
+  <button class="tb" id="tWpn" aria-label="武器を切り替える">斧</button>
+</div>
+<div class="hud" id="tutil" hidden>
+  <button id="tMenu">メニュー</button><button id="tExp">拡張</button><button id="tMng">住民</button><button id="tZoom">ズーム</button><button id="tPause" aria-label="一時停止">中断</button>
+  <span class="tstat" id="tStat"><span class="hpbar"><i id="tHp" style="width:100%"></i></span><span class="num" id="tHpTxt">100</span><span id="tBag" class="num"></span></span>
+</div>
+<div class="hud" id="tPlace" hidden><div class="panel"><span id="tPlaceTxt">マスをタップして選択</span><button class="primary" id="tPlaceOk">ここに配置</button><button id="tPlaceNo">やめる</button></div></div>
+<div class="screen" id="drawer" hidden><div class="drawer-in">
+  <div class="drawer-head"><h2 class="big" style="font-size:22px">メニュー</h2><button id="btnCloseDr">閉じる</button></div>
+  <div id="drawerBody"></div>
+</div></div>
+
+<div class="screen" id="title">
+  <div class="card">
+    <h1 class="title-big">FROST <em>FRONTIER</em></h1>
+    <p class="sub">雪原に火を灯し、柵を広げ、住民と共に冬を越える。サバイバルアクション × 領地拡張RTS（プロトタイプ）</p>
+    <div class="stages" id="stageList"></div>
+    <div class="ctl">
+      <div><b>WASD</b>移動</div><div><b>左クリック</b>攻撃・伐採</div>
+      <div><b>Space</b>回避</div><div><b>E（長押し）</b>建設・調理・修理</div>
+      <div><b>Q</b>焼肉を食べてHP回復</div><div><b>1 / 2</b>斧 / 弓（技術Lv2）</div>
+      <div><b>B</b>領地拡張モード</div><div><b>Tab</b>住民管理</div>
+      <div><b>右クリック</b>対象の情報 / 配置取消</div><div><b>ホイール</b>ズーム</div>
+    </div>
+    <div class="mobile-note">タッチ操作に対応しています。左半分をドラッグで移動、右下のボタンで攻撃・回避・作業。拡張と建築は「メニュー」から。横画面がおすすめです。</div>
+  </div>
+</div>
+<div class="screen" id="pause" hidden><div class="card" style="max-width:420px">
+  <h2 class="big">一時停止</h2>
+  <div class="actions"><button class="primary" id="btnResume">再開</button><button id="btnRetryP">ステージをやり直す</button><button id="btnTitleP">ステージ選択へ</button></div>
+</div></div>
+<div class="screen" id="over" hidden><div class="card" style="max-width:480px">
+  <h2 class="big" style="color:var(--bad)">火が消えた</h2>
+  <p class="sub" id="overReason"></p>
+  <div class="actions"><button class="primary" id="btnRetry">このステージを最初から</button><button id="btnTitleO">ステージ選択へ</button></div>
+</div></div>
+<div class="screen" id="clear" hidden><div class="card" style="max-width:560px">
+  <div class="stage-tag" id="clearTag">STAGE 1 CLEAR</div>
+  <h2 class="big" id="clearTitle">ステージクリア</h2>
+  <div class="statgrid" id="clearStats"></div>
+  <div class="actions" id="clearActions"></div>
+</div></div>
+<div class="screen" id="manage" hidden><div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+    <h2 class="big" style="font-size:26px">住民管理</h2>
+    <span class="num" id="mgPop" style="color:var(--dim)"></span>
+  </div>
+  <p class="sub" style="margin:6px 0 8px;font-size:12px">＋で待機中の住民を役割に就かせ、－で待機に戻します。管理画面を開いている間は時間が止まります。</p>
+  <div id="roleRows"></div>
+  <div class="actions">
+    <button class="primary" id="btnRecruit">住民を募集（焼肉 3）</button>
+    <button id="btnCloseMg">閉じる <kbd>Tab</kbd></button>
+  </div>
+  <p id="mgMsg" style="color:var(--warn);font-size:12px;min-height:1.5em;margin:8px 0 0"></p>
+</div></div>
+
+<script>
+'use strict';
+/* =========================================================
+   FROST FRONTIER — prototype
+   Sections: CONFIG / UTIL / WORLD / TERRITORY / ENTITIES / AI / RAIDS / STAGE / RENDER / HUD / INPUT / LOOP
+   ========================================================= */
+
+// ---------------- CONFIG (balance values live here) ----------------
+const CELL = 64;
+const BAL = {
+  player:{hp:100,speed:178,dodgeSpeed:540,dodgeTime:0.17,dodgeCd:0.6,iframe:0.3,axeDmg:14,axeReach:62,axeArc:1.05,axeCd:0.34,
+          bowDmg:11,bowCd:0.48,arrowSpeed:660,bag:30,eatHeal:35,buildRate:3,cookTime:1.0,repairRate:32},
+  res:{hp:50,guardHp:95,speed:114,chopTime:1.5,carry:4,guardDmg:10,guardCd:0.85,hunterDmg:9,hunterCd:1.1,buildRate:1,repairRate:14,cookTime:3.5},
+  popBase:4, popBaseL3:6, houseCap:3, houseCapL3:4, recruitCost:3,
+  food:{interval:50, perPop:4, starveDmg:12},
+  cap:{wood:100,raw:20,cooked:20}, storageCap:{wood:120,raw:20,cooked:20},
+  expand:{base:2,step:10,work:6,tp:2},
+  fence:[null,{name:'木柵',hp:60},{name:'強化木柵',hp:130,cost:1},{name:'頑丈な防壁',hp:240,cost:2}],
+  bld:{
+    campfire:{name:'キャンプファイヤー',hp:400,desc:'調理と暖房。破壊されるとゲームオーバー'},
+    house:{name:'住居',cost:18,work:10,tech:1,hp:150,tp:4,desc:'人口上限 +3（Lv3で+4）'},
+    workshop:{name:'作業場',cost:28,work:14,tech:1,hp:200,tp:6,desc:'技術研究ができるようになる'},
+    storage:{name:'倉庫',cost:24,work:12,tech:2,hp:200,tp:5,desc:'保管上限 木材+120 / 肉+20'},
+    tower:{name:'見張り台',cost:30,work:14,tech:2,hp:180,tp:6,range:260,dmg:9,rate:1.0,desc:'範囲内の敵を自動で射る'},
+    bigtower:{name:'大型見張り台',cost:48,work:20,tech:3,hp:300,tp:8,range:340,dmg:15,rate:0.75,desc:'射程と威力が大きい見張り台'},
+  },
+  tech:[null,{name:'原始的な雪原拠点'},{tp:25,name:'定住集落',unlock:'強化木柵・見張り台・弓・倉庫・作業効率+25%'},{tp:60,name:'要塞化した集落',unlock:'頑丈な防壁・大型見張り台・強化武器・防衛+30%・人口上限増加'}],
+  tpGain:{raid:8,outpost:15,base:20,bear:1},
+  mob:{
+    bear:{name:'ホッキョクグマ',hp:100,dmg:14,speed:60,reach:44,cd:1.3,wind:.5,aggro:200,r:22,drop:['raw',3]},
+    bigbear:{name:'巨大ホッキョクグマ',hp:260,dmg:24,speed:66,reach:52,cd:1.4,wind:.55,aggro:230,r:28,drop:['raw',6]},
+    deer:{name:'トナカイ',hp:16,dmg:0,speed:150,reach:0,cd:1,aggro:170,r:14,drop:['raw',2]},
+    raider:{name:'部族の戦士',hp:45,dmg:7,speed:84,reach:34,cd:1.0,wind:.3,aggro:110,r:13,drop:['wood',3]},
+    brute:{name:'部族の重戦士',hp:90,dmg:11,speed:74,reach:36,cd:1.15,wind:.4,aggro:110,r:16,drop:['wood',5]},
+    chief:{name:'部族の首長',hp:700,dmg:22,speed:80,reach:56,cd:1.1,wind:.35,aggro:340,r:26,drop:['wood',30]},
+  },
+  struct:{outpost:{name:'敵の小拠点',hp:300,maxDef:3,r:40},base:{name:'敵の大型拠点',hp:700,maxDef:5,r:56}},
+};
+const ROLES=[
+  {id:'idle',name:'待機',color:'#a7b2bc',desc:'キャンプファイヤーのそばで休む'},
+  {id:'cook',name:'料理人',color:'#f2913f',desc:'生肉を自動で焼肉にする'},
+  {id:'lumber',name:'木こり',color:'#6fbf78',desc:'領地付近の木を伐って運ぶ'},
+  {id:'builder',name:'建築士',color:'#f3c94c',desc:'拡張・建築・柵の修理'},
+  {id:'guard',name:'衛兵',color:'#7fb2e6',desc:'外周を巡回し、近づく敵と戦う'},
+  {id:'hunter',name:'狩人',color:'#c89a66',desc:'付近のトナカイを狩り、肉を運ぶ'},
+];
+const ROLE=Object.fromEntries(ROLES.map(r=>[r.id,r]));
+
+// ---------------- UTIL ----------------
+const TAU=Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function angDiff(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;if(d<-Math.PI)d+=TAU;return d;}
+function dirName(a){const n=['北','北東','東','南東','南','南西','西','北西'];return n[Math.round(((a+Math.PI/2+TAU*2)%TAU)/(TAU/8))%8];}
+function distToSeg(px,py,x1,y1,x2,y2){const dx=x2-x1,dy=y2-y1;const l=dx*dx+dy*dy;let t=l?((px-x1)*dx+(py-y1)*dy)/l:0;t=clamp(t,0,1);return dist(px,py,x1+dx*t,y1+dy*t);}
+const easeOutBack=t=>{const c1=1.9,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);};
+const $=id=>document.getElementById(id);
+
+// ---------------- STAGES ----------------
+const pop=()=>G.residents.length;
+const roleN=r=>G.residents.filter(u=>u.role===r).length;
+const builtN=t=>G.buildings.filter(b=>b.type===t&&b.built).length;
+const STAGES=[
+  {id:1,name:'雪原の小さな火',theme:'サバイバルと拠点の基礎',time:'5〜8分',seed:1942,size:34,terr:3,dark:.16,
+   wood:10,raw:0,cooked:3,tp:0,tech:1,fenceTier:1,residents:['builder','cook'],buildings:[],
+   bears:4,bigBears:0,deer:6,forests:7,scatter:50,nearForest:true,tutorial:true,
+   firstRaid:{size:4},
+   objectives:[
+     {t:'木を伐採して木材を集める',n:30,v:()=>G.stats.wood},
+     {t:'ホッキョクグマを倒す',n:2,v:()=>G.stats.bears},
+     {t:'生肉を調理する',n:5,v:()=>G.stats.cooked},
+     {t:'領地を広げる（マス）',n:25,v:()=>G.area},
+     {t:'衛兵を配置する',n:2,v:()=>roleN('guard')},
+     {t:'敵対部族の襲撃を撃退する',n:1,v:()=>G.stats.raids,note:'目標1〜5を達成すると襲撃が来る'},
+   ]},
+  {id:2,name:'凍てつく森の開拓',theme:'住民の分業と領地経営',time:'8〜12分',seed:7331,size:46,terr:5,dark:.24,
+   wood:40,raw:2,cooked:9,tp:6,tech:1,fenceTier:1,residents:['builder','cook','lumber','hunter','guard'],buildings:[['house',-2,-1]],
+   bears:5,bigBears:0,deer:11,forests:12,scatter:90,
+   outpost:{ang:-0.75,distF:.36},
+   raids:{first:150,interval:110,size:3,grow:1,warn:15},
+   finalRaid:{size:8},
+   objectives:[
+     {t:'人口を増やす',n:8,v:()=>pop()},
+     {t:'倉庫を建設する',n:1,v:()=>builtN('storage')},
+     {t:'見張り台を建てる',n:2,v:()=>builtN('tower')+builtN('bigtower')},
+     {t:'木材を集める',n:80,v:()=>G.stats.wood},
+     {t:'技術レベル2を解放する',n:2,v:()=>G.tech},
+     {t:'敵対部族の小拠点を破壊する',n:1,v:()=>G.stats.outpost},
+     {t:'最後の敵襲を撃退する',n:1,v:()=>G.stats.final,note:'目標1〜6を達成すると大規模な敵襲が来る'},
+   ]},
+  {id:3,name:'氷雪の要塞',theme:'大規模防衛と最終決戦',time:'12〜15分',seed:2077,size:56,terr:7,dark:.34,
+   wood:90,raw:4,cooked:16,tp:10,tech:2,fenceTier:2,
+   residents:['builder','builder','cook','lumber','lumber','hunter','hunter','guard','guard','guard'],
+   buildings:[['house',-2,-2],['house',2,-2],['workshop',-2,2],['storage',2,2],['tower',-3,0],['tower',3,0]],
+   bears:5,bigBears:3,deer:13,forests:16,scatter:130,
+   base:{ang:0.62,distF:.4},
+   raids:{first:80,interval:85,size:3,grow:1,warn:15,multi:true,brute:.35},
+   chiefAssault:true,
+   cond:'クリア条件：首長の撃破 ＋ キャンプファイヤーと住民5人以上の生存',
+   objectives:[
+     {t:'人口を増やす',n:15,v:()=>pop()},
+     {t:'技術レベル3に到達する',n:3,v:()=>G.tech},
+     {t:'領地を広げる（マス）',n:70,v:()=>G.area},
+     {t:'防壁を「頑丈な防壁」に強化する',n:3,v:()=>G.fenceTier},
+     {t:'大規模な敵襲を防衛する',n:3,v:()=>G.stats.raids},
+     {t:'敵対部族の首長を倒す',n:1,v:()=>G.stats.chief,note:'目標1〜5を達成すると首長が攻めてくる'},
+   ]},
+];
+
+// ---------------- STATE ----------------
+let G=null;
+let DEBUG=false;
+let TOUCH=false;
+const stick={id:null,ox:0,oy:0,vx:0,vy:0,t0:0,moved:0};
+const tapP={id:null,x:0,y:0,t0:0,moved:0};
+let touchAtk=false;
+const keys={};
+const mouse={x:0,y:0,down:false,wx:0,wy:0,in:false};
+
+function newGame(si){
+  const sd=STAGES[si];
+  G={si,sd,state:'play',time:0,cols:sd.size,rows:sd.size,W:sd.size*CELL,H:sd.size*CELL,
+    owned:new Uint8Array(sd.size*sd.size),area:0,sites:new Map(),fences:new Map(),falling:[],flashes:[],
+    trees:[],rocks:[],buildings:[],residents:[],mobs:[],structs:[],proj:[],drops:[],parts:[],texts:[],respawn:[],
+    res:{wood:sd.wood,raw:sd.raw,cooked:sd.cooked,tp:sd.tp},
+    stats:{wood:0,bears:0,cooked:0,raids:0,outpost:0,chief:0,final:0,deaths:0,expands:0,leftHome:0,kills:0},
+    tech:sd.tech,fenceTier:sd.fenceTier,mode:null,hover:null,inspect:null,panel:false,
+    flow:null,flowDirty:true,flowT:0,terrR:0,foodT:0,hunger:0,cookP:0,
+    raid:{t:0,next:sd.raids?sd.raids.first:Infinity,n:0,active:[],warn:null,triggered:false,finalSent:false,chiefSent:false},
+    cam:{x:0,y:0,zoom:1,shake:0},weather:{bl:0,target:0,t:rand(45,70),wind:30},
+    fenceBreakMsgT:0,obs:null,objDone:sd.objectives.map(()=>false),godMode:false,freeMode:false,woodFullT:0,
+  };
+  genWorld(sd);
+  const p=G.player;
+  G.cam.x=p.x;G.cam.y=p.y;
+}
+
+// ---------------- WORLD ----------------
+const cellIdx=(cx,cy)=>cy*G.cols+cx;
+const inMap=(cx,cy)=>cx>=0&&cy>=0&&cx<G.cols&&cy<G.rows;
+const cellOf=v=>Math.floor(v/CELL);
+const isOwned=(cx,cy)=>inMap(cx,cy)&&G.owned[cellIdx(cx,cy)]===1;
+const ownedAt=(x,y)=>isOwned(cellOf(x),cellOf(y));
+const cellCenter=(cx,cy)=>({x:cx*CELL+CELL/2,y:cy*CELL+CELL/2});
+
+function genWorld(sd){
+  const R=mulberry(sd.seed);
+  const c=Math.floor(G.cols/2);G.cfx=c;G.cfy=c;
+  const h=Math.floor(sd.terr/2);
+  for(let y=-h;y<=h;y++)for(let x=-h;x<=h;x++)G.owned[cellIdx(c+x,c+y)]=1;
+  G.area=sd.terr*sd.terr;
+  // campfire + buildings
+  G.campfire=makeBuilding('campfire',c,c,true);
+  for(const [t,dx,dy] of sd.buildings)makeBuilding(t,c+dx,c+dy,true);
+  const ctr=cellCenter(c,c);
+  // enemy structures
+  const placeStruct=(type,cfg)=>{
+    const d=G.W*cfg.distF;const x=clamp(ctr.x+Math.cos(cfg.ang)*d,CELL*3,G.W-CELL*3),y=clamp(ctr.y+Math.sin(cfg.ang)*d,CELL*3,G.H-CELL*3);
+    const def=BAL.struct[type];
+    G.structs.push({kind:'struct',type,name:def.name,x,y,r:def.r,hp:def.hp,maxHp:def.hp,defs:[],spawnT:0,dead:false,hitFlash:0});
+  };
+  if(sd.outpost)placeStruct('outpost',sd.outpost);
+  if(sd.base)placeStruct('base',sd.base);
+  // trees
+  const blocked=(x,y,m)=>{const cx=cellOf(x),cy=cellOf(y);if(!inMap(cx,cy))return true;
+    for(let yy=-m;yy<=m;yy++)for(let xx=-m;xx<=m;xx++)if(isOwned(cx+xx,cy+yy))return true;
+    for(const s of G.structs)if(dist(x,y,s.x,s.y)<s.r+CELL*1.6)return true;
+    return x<20||y<20||x>G.W-20||y>G.H-20;};
+  const addTree=(x,y)=>{if(blocked(x,y,1))return;for(const t of G.trees)if(dist(x,y,t.x,t.y)<26)return;
+    const s=0.8+R()*0.45;G.trees.push({kind:'tree',x,y,s,r:13*s,wood:5,max:5,regrow:0,shake:0,v:Math.floor(R()*3)});};
+  const gauss=()=>{let u=0,v=0;while(!u)u=R();while(!v)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v);};
+  const cluster=(cx,cy,n,sp)=>{for(let i=0;i<n;i++)addTree(cx+gauss()*sp,cy+gauss()*sp);};
+  if(sd.nearForest){
+    const a0=R()*TAU;
+    for(let k=0;k<3;k++){const a=a0+k*TAU/3+R()*.5,d=CELL*(4.2+R()*1.6);cluster(ctr.x+Math.cos(a)*d,ctr.y+Math.sin(a)*d,16,CELL*1.0);}
+  }else{
+    for(let k=0;k<4;k++){const a=R()*TAU,d=CELL*(sd.terr/2+3+R()*2);cluster(ctr.x+Math.cos(a)*d,ctr.y+Math.sin(a)*d,18,CELL*1.2);}
+  }
+  for(let k=0;k<sd.forests;k++){const a=R()*TAU,d=CELL*(6+R()*(G.cols/2-7));cluster(ctr.x+Math.cos(a)*d,ctr.y+Math.sin(a)*d,14+Math.floor(R()*14),CELL*(1.1+R()*.9));}
+  for(let k=0;k<sd.scatter;k++)addTree(R()*G.W,R()*G.H);
+  // rocks
+  const nRocks=Math.floor(G.cols*1.1);
+  for(let k=0;k<nRocks;k++){const x=R()*G.W,y=R()*G.H;if(blocked(x,y,1))continue;G.rocks.push({kind:'rock',x,y,r:12+R()*14,v:R()});}
+  // player
+  G.player={kind:'player',name:'リーダー',x:ctr.x,y:ctr.y+CELL*0.8,r:13,hp:BAL.player.hp,maxHp:BAL.player.hp,face:-Math.PI/2,weapon:'axe',
+    atkT:0,swing:0,dodgeT:0,dodgeCd:0,inv:0,dvx:0,dvy:0,bag:{wood:0,raw:0},eatCd:0,hitFlash:0,walk:0,moving:false,dead:false};
+  // residents
+  sd.residents.forEach((r,i)=>{const a=i/sd.residents.length*TAU;spawnResident(r,ctr.x+Math.cos(a)*70,ctr.y+Math.sin(a)*70);});
+  // wildlife
+  for(let i=0;i<sd.bears;i++)spawnWild('bear');
+  for(let i=0;i<sd.bigBears;i++)spawnWild('bigbear');
+  for(let i=0;i<sd.deer;i++)spawnWild('deer');
+  rebuildObstacles();
+  recomputeTerritory(null,true);
+}
+
+function spawnWild(kind){
+  const ctr=cellCenter(G.cfx,G.cfy);
+  const minD=kind==='deer'?CELL*(G.sd.terr/2+3):CELL*(G.sd.terr/2+6);
+  const maxD=kind==='deer'?CELL*(G.sd.terr/2+11):G.W*0.48;
+  for(let tries=0;tries<60;tries++){
+    const a=Math.random()*TAU,d=rand(minD,maxD);
+    const x=ctr.x+Math.cos(a)*d,y=ctr.y+Math.sin(a)*d;
+    if(x<40||y<40||x>G.W-40||y>G.H-40)continue;
+    if(ownedAt(x,y))continue;
+    if(G.structs.some(s=>dist(x,y,s.x,s.y)<s.r+120))continue;
+    const m=makeMob(kind,x,y);
+    if(kind!=='deer'&&dist(x,y,G.player.x,G.player.y)<300){G.mobs.pop();continue;}
+    return m;
+  }
+  return null;
+}
+function dangerMul(x,y){const ctr=cellCenter(G.cfx,G.cfy);return 1+(G.sd.id===1?0.35:0.7)*clamp((dist(x,y,ctr.x,ctr.y)-CELL*8)/(G.W*0.4),0,1);}
+function makeMob(kind,x,y,opts={}){
+  const d=BAL.mob[kind];const lv=opts.lv??((kind==='bear'||kind==='bigbear'||kind==='deer')?dangerMul(x,y):1);
+  const m={kind,name:d.name,def:d,x,y,r:d.r,hp:Math.round(d.hp*lv),maxHp:Math.round(d.hp*lv),dmg:d.dmg*lv,speed:d.speed,lv,
+    cd:rand(0,.5),hitFlash:0,dead:false,home:{x,y},wp:null,mode:opts.mode||'wander',raid:opts.raid||null,provoke:null,provT:0,
+    face:Math.random()*TAU,walk:Math.random()*10,atk:0,struct:opts.struct||null,
+    chargeCd:4,charge:0,tele:0,wind:0,chx:0,chy:0,hitSet:null};
+  G.mobs.push(m);return m;
+}
+function makeBuilding(type,cx,cy,built){
+  const def=BAL.bld[type];const c=cellCenter(cx,cy);
+  const b={kind:'building',type,name:def.name,def,cx,cy,x:c.x,y:c.y,r:type==='campfire'?20:24,hp:def.hp,maxHp:def.hp,built,
+    work:built?(def.work||0):0,need:def.work||0,cd:0,hitFlash:0,dead:false,rise:built?1:0};
+  G.buildings.push(b);return b;
+}
+function spawnResident(role,x,y){
+  const u={kind:'res',role,name:'住民',x,y,r:10,hp:role==='guard'?BAL.res.guardHp:BAL.res.hp,maxHp:role==='guard'?BAL.res.guardHp:BAL.res.hp,
+    job:null,wp:null,t:rand(0,1),carry:null,cd:0,hitFlash:0,dead:false,face:0,walk:Math.random()*9,moving:false,retreat:0,
+    id:Math.floor(Math.random()*1e9),state:''};
+  G.residents.push(u);return u;
+}
+function setRole(u,role){
+  u.role=role;u.job=null;u.wp=null;u.carry=null;
+  const mh=role==='guard'?BAL.res.guardHp:BAL.res.hp;const ratio=u.hp/u.maxHp;u.maxHp=mh;u.hp=Math.max(1,Math.round(mh*ratio));
+}
+
+// obstacle buckets per cell
+function rebuildObstacles(){
+  G.obs=Array.from({length:G.cols*G.rows},()=>[]);
+  const add=o=>{const cx=cellOf(o.x),cy=cellOf(o.y);if(inMap(cx,cy))G.obs[cellIdx(cx,cy)].push(o);};
+  G.trees.forEach(add);G.rocks.forEach(add);G.buildings.forEach(add);G.structs.forEach(add);
+}
+function obstacleR(o){if(o.kind==='tree')return o.wood>0?o.r:0;if(o.kind==='struct')return o.dead?0:o.r*0.8;if(o.kind==='building')return o.dead?0:o.r;return o.r;}
+function pushOut(u){
+  const cx=cellOf(u.x),cy=cellOf(u.y);
+  for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++){
+    if(!inMap(cx+xx,cy+yy))continue;
+    for(const o of G.obs[cellIdx(cx+xx,cy+yy)]){
+      const orr=obstacleR(o);if(!orr)continue;
+      const dx=u.x-o.x,dy=u.y-o.y,d=Math.hypot(dx,dy),m=u.r*0.7+orr;
+      if(d<m&&d>0.001){u.x=o.x+dx/d*m;u.y=o.y+dy/d*m;}
+    }
+  }
+}
+
+// ---------------- TERRITORY / FENCES ----------------
+function fenceBetween(ax,ay,bx,by){
+  if(ax!==bx){const x=Math.max(ax,bx);return G.fences.get('v'+x+','+ay);}
+  const y=Math.max(ay,by);return G.fences.get('h'+ax+','+y);
+}
+function intactBetweenCells(c0x,c0y,c1x,c1y){
+  if(c0x===c1x&&c0y===c1y)return null;
+  const dx=c1x-c0x,dy=c1y-c0y;
+  if(Math.abs(dx)+Math.abs(dy)===1){const f=fenceBetween(c0x,c0y,c1x,c1y);return f&&f.hp>0?f:null;}
+  // diagonal: check both L paths; blocked if either path is blocked
+  const a=fenceBetween(c0x,c0y,c1x,c0y),b=fenceBetween(c1x,c0y,c1x,c1y);
+  const c=fenceBetween(c0x,c0y,c0x,c1y),d=fenceBetween(c0x,c1y,c1x,c1y);
+  const p1=(a&&a.hp>0)?a:(b&&b.hp>0)?b:null,p2=(c&&c.hp>0)?c:(d&&d.hp>0)?d:null;
+  return p1||p2;
+}
+function fenceCross(x0,y0,x1,y1){return intactBetweenCells(cellOf(x0),cellOf(y0),cellOf(x1),cellOf(y1));}
+
+function recomputeTerritory(originCell,initial){
+  const want=new Map();
+  for(let cy=0;cy<G.rows;cy++)for(let cx=0;cx<G.cols;cx++){
+    if(!G.owned[cellIdx(cx,cy)])continue;
+    if(!isOwned(cx,cy-1))want.set('h'+cx+','+cy,[cx*CELL,cy*CELL,(cx+1)*CELL,cy*CELL,0,-1]);
+    if(!isOwned(cx,cy+1))want.set('h'+cx+','+(cy+1),[cx*CELL,(cy+1)*CELL,(cx+1)*CELL,(cy+1)*CELL,0,1]);
+    if(!isOwned(cx-1,cy))want.set('v'+cx+','+cy,[cx*CELL,cy*CELL,cx*CELL,(cy+1)*CELL,-1,0]);
+    if(!isOwned(cx+1,cy))want.set('v'+(cx+1)+','+cy,[(cx+1)*CELL,cy*CELL,(cx+1)*CELL,(cy+1)*CELL,1,0]);
+  }
+  const o=originCell?cellCenter(originCell.cx,originCell.cy):null;
+  for(const [k,f] of G.fences){if(!want.has(k)){G.fences.delete(k);f.fall=0;G.falling.push(f);}}
+  for(const [k,v] of want){
+    const ex=G.fences.get(k);
+    if(ex){ex.nx=v[4];ex.ny=v[5];continue;}
+    const mx=(v[0]+v[2])/2,my=(v[1]+v[3])/2;
+    const tierHp=BAL.fence[G.fenceTier].hp;
+    G.fences.set(k,{kind:'fence',key:k,name:BAL.fence[G.fenceTier].name,x1:v[0],y1:v[1],x2:v[2],y2:v[3],x:mx,y:my,nx:v[4],ny:v[5],hp:tierHp,maxHp:tierHp,tier:G.fenceTier,
+      anim:initial?1:0,delay:initial||!o?0:dist(mx,my,o.x,o.y)*0.0016,puffed:!!initial,hitFlash:0});
+  }
+  // territory radius (for AI ranges)
+  const c=cellCenter(G.cfx,G.cfy);let r=0;
+  for(let cy=0;cy<G.rows;cy++)for(let cx=0;cx<G.cols;cx++)if(G.owned[cellIdx(cx,cy)]){const p=cellCenter(cx,cy);r=Math.max(r,dist(p.x,p.y,c.x,c.y));}
+  G.terrR=r+CELL*0.5;
+  G.flowDirty=true;
+}
+function expandCost(){let pend=0;for(const s of G.sites.values())if(s.type==='expand')pend++;return BAL.expand.base+Math.floor((G.area+pend)/BAL.expand.step);}
+function canExpand(cx,cy){
+  if(!inMap(cx,cy)||isOwned(cx,cy))return false;
+  if(cx<1||cy<1||cx>=G.cols-1||cy>=G.rows-1)return false;
+  if(G.sites.has(cellIdx(cx,cy)))return false;
+  if(!(isOwned(cx-1,cy)||isOwned(cx+1,cy)||isOwned(cx,cy-1)||isOwned(cx,cy+1)))return false;
+  const c=cellCenter(cx,cy);
+  for(const s of G.structs)if(!s.dead&&dist(c.x,c.y,s.x,s.y)<s.r+CELL)return false;
+  return true;
+}
+function orderExpand(cx,cy){
+  if(!canExpand(cx,cy))return false;
+  const cost=expandCost();
+  if(G.res.wood<cost){banner('木材が足りない（必要 '+cost+'）','bad');return false;}
+  G.res.wood-=cost;
+  const c=cellCenter(cx,cy);
+  G.sites.set(cellIdx(cx,cy),{kind:'site',type:'expand',name:'拡張予定地',cx,cy,x:c.x,y:c.y,work:0,need:BAL.expand.work,cost});
+  puff(c.x,c.y,8,'#ffffff');
+  return true;
+}
+function completeExpand(site){
+  G.sites.delete(cellIdx(site.cx,site.cy));
+  G.owned[cellIdx(site.cx,site.cy)]=1;G.area++;G.stats.expands++;
+  // clear trees on the new cell, adding their wood
+  let gained=0;
+  for(const t of G.trees){if(t.wood>0&&cellOf(t.x)===site.cx&&cellOf(t.y)===site.cy){gained+=t.wood;t.wood=0;t.regrow=1e9;t.cleared=true;}}
+  if(gained){const a=addRes('wood',gained,true);if(a)floatText(site.x,site.y-20,'+'+a+' 木材','#f3c94c');}
+  G.res.tp+=BAL.expand.tp;
+  recomputeTerritory(site,false);
+  G.flashes.push({x:site.x,y:site.y,t:0});
+  for(let i=0;i<14;i++)G.parts.push({x:site.x+rand(-30,30),y:site.y+rand(-30,30),vx:rand(-40,40),vy:rand(-60,-10),life:0,max:rand(.5,.9),c:'#ffffff',s:rand(2,4),g:60});
+  floatText(site.x,site.y,'領地拡張 +'+BAL.expand.tp+'TP','#8fd0f5');
+}
+function upgradeFenceCost(){if(G.fenceTier>=3)return 0;return G.fences.size*BAL.fence[G.fenceTier+1].cost;}
+function upgradeFences(){
+  const nt=G.fenceTier+1;if(nt>3||G.tech<nt)return;
+  const cost=upgradeFenceCost();if(G.res.wood<cost){banner('木材が足りない（必要 '+cost+'）','bad');return;}
+  G.res.wood-=cost;G.fenceTier=nt;
+  const def=BAL.fence[nt];
+  for(const f of G.fences.values()){f.tier=nt;f.name=def.name;f.maxHp=def.hp;f.hp=def.hp;f.anim=0;f.delay=dist(f.x,f.y,G.campfire.x,G.campfire.y)*0.0012;f.puffed=false;}
+  G.flowDirty=true;banner('防壁を「'+def.name+'」に強化した','good');
+}
+function damageFence(f,d){
+  if(f.hp<=0)return;f.hp-=d;f.hitFlash=.12;
+  for(let i=0;i<3;i++)G.parts.push({x:f.x+rand(-10,10),y:f.y-10,vx:rand(-50,50),vy:rand(-80,-20),life:0,max:.5,c:'#8a5a33',s:2.5,g:200});
+  if(f.hp<=0){f.hp=0;G.flowDirty=true;if(G.fenceBreakMsgT<=0){banner(dirName(Math.atan2(f.y-G.campfire.y,f.x-G.campfire.x))+'の柵が破られた！','bad');G.fenceBreakMsgT=6;}}
+}
+
+// flow field toward campfire (Dijkstra; intact fences are expensive to cross)
+function computeFlow(){
+  const C=G.cols,R=G.rows,N=C*R;const d=new Float64Array(N).fill(1e9);
+  // edge costs: crossing an intact fence costs extra in proportion to its HP
+  const costE=new Float64Array(N),costS=new Float64Array(N); // east edge of cell i, south edge of cell i
+  for(let y=0;y<R;y++)for(let x=0;x<C;x++){const i=y*C+x;
+    const fe=x+1<C?G.fences.get('v'+(x+1)+','+y):null;costE[i]=1+(fe&&fe.hp>0?fe.hp/12:0);
+    const fs=y+1<R?G.fences.get('h'+x+','+(y+1)):null;costS[i]=1+(fs&&fs.hp>0?fs.hp/12:0);}
+  const hp=new Float64Array(N*4+16),hi=new Int32Array(N*4+16);let n=0;
+  const push=(p,i)=>{let k=n++;while(k>0){const q=(k-1)>>1;if(hp[q]<=p)break;hp[k]=hp[q];hi[k]=hi[q];k=q;}hp[k]=p;hi[k]=i;};
+  const s=G.cfy*C+G.cfx;d[s]=0;push(0,s);
+  while(n>0){
+    const p=hp[0],i=hi[0];n--;
+    if(n>0){const lp=hp[n],li=hi[n];let k=0;for(;;){const l=2*k+1;if(l>=n)break;let m=l;if(l+1<n&&hp[l+1]<hp[l])m=l+1;if(hp[m]>=lp)break;hp[k]=hp[m];hi[k]=hi[m];k=m;}hp[k]=lp;hi[k]=li;}
+    if(p>d[i])continue;
+    const x=i%C,y=(i/C)|0;
+    if(x+1<C){const j=i+1,v=p+costE[i];if(v<d[j]){d[j]=v;push(v,j);}}
+    if(x>0){const j=i-1,v=p+costE[j];if(v<d[j]){d[j]=v;push(v,j);}}
+    if(y+1<R){const j=i+C,v=p+costS[i];if(v<d[j]){d[j]=v;push(v,j);}}
+    if(y>0){const j=i-C,v=p+costS[j];if(v<d[j]){d[j]=v;push(v,j);}}
+  }
+  G.flow=d;G.flowDirty=false;
+}
+function flowStep(m){
+  const cx=cellOf(m.x),cy=cellOf(m.y);
+  if(cx===G.cfx&&cy===G.cfy)return {home:true};
+  let best=null,bv=1e9;
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const nx=cx+dx,ny=cy+dy;if(!inMap(nx,ny))continue;
+    const f=fenceBetween(cx,cy,nx,ny);const cost=1+(f&&f.hp>0?f.hp/12:0);
+    const v=G.flow[cellIdx(nx,ny)]+cost;if(v<bv){bv=v;best={nx,ny,fence:f&&f.hp>0?f:null};}
+  }
+  return best||{home:true};
+}
+
+// ---------------- RESOURCES ----------------
+function cap(t){return BAL.cap[t]+builtN('storage')*BAL.storageCap[t];}
+function addRes(t,n,gather){
+  const room=Math.max(0,cap(t)-G.res[t]);const a=Math.min(room,n);G.res[t]+=a;
+  if(gather&&t==='wood')G.stats.wood+=a;
+  if(a<n&&G.woodFullT<=0){banner('倉庫がいっぱい（'+(t==='wood'?'木材':'肉')+'）。倉庫を建てよう','bad');G.woodFullT=8;}
+  return a;
+}
+function popCap(){return (G.tech>=3?BAL.popBaseL3:BAL.popBase)+builtN('house')*(G.tech>=3?BAL.houseCapL3:BAL.houseCap);}
+const effMul=()=>(G.tech>=2?1.25:1)*(G.hunger>0?0.5:1);
+const wMul=()=>G.tech>=3?1.6:1;
+const defMul=()=>G.tech>=3?1.3:1;
+function depotFor(x,y){
+  let best=G.campfire,bd=dist(x,y,G.campfire.x,G.campfire.y);
+  for(const b of G.buildings)if(b.type==='storage'&&b.built&&!b.dead){const d=dist(x,y,b.x,b.y);if(d<bd){bd=d;best=b;}}
+  return best;
+}
+
+// ---------------- BUILDINGS ----------------
+function canPlace(type,cx,cy){
+  const def=BAL.bld[type];
+  if(!isOwned(cx,cy))return {ok:false,why:'領地の中にしか建てられない'};
+  if(G.tech<def.tech)return {ok:false,why:'技術Lv'+def.tech+'が必要'};
+  if(G.buildings.some(b=>!b.dead&&b.cx===cx&&b.cy===cy))return {ok:false,why:'すでに建物がある'};
+  if(G.res.wood<def.cost)return {ok:false,why:'木材が足りない（'+def.cost+'）'};
+  return {ok:true};
+}
+function orderBuild(type,cx,cy){
+  const c=canPlace(type,cx,cy);if(!c.ok){banner(c.why,'bad');return false;}
+  G.res.wood-=BAL.bld[type].cost;
+  G.rocks=G.rocks.filter(r=>!(cellOf(r.x)===cx&&cellOf(r.y)===cy));
+  makeBuilding(type,cx,cy,false);rebuildObstacles();
+  return true;
+}
+function completeBuild(b){
+  b.built=true;b.work=b.need;b.rise=0;G.res.tp+=b.def.tp||0;
+  floatText(b.x,b.y-40,b.name+' 完成 +'+(b.def.tp||0)+'TP','#8fd0f5');
+  puff(b.x,b.y,14,'#ffffff');
+}
+function research(){
+  const nt=G.tech+1;if(nt>3)return;
+  const t=BAL.tech[nt];
+  if(!builtN('workshop')){banner('研究には作業場が必要','bad');return;}
+  if(G.res.tp<t.tp){banner('技術ポイントが足りない（'+t.tp+'）','bad');return;}
+  G.res.tp-=t.tp;G.tech=nt;
+  banner('技術レベル'+nt+'「'+t.name+'」を解放','good');
+  if(nt===2)banner('弓が使えるようになった（2キー）','good');
+}
+
+// ---------------- FX helpers ----------------
+function floatText(x,y,s,c){G.texts.push({x,y,s,c:c||'#fff',t:0});}
+function puff(x,y,n,c){for(let i=0;i<n;i++){const a=Math.random()*TAU,sp=rand(20,90);G.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp*0.6-20,life:0,max:rand(.4,.8),c,s:rand(2,5),g:30});}}
+const bannerEl=$('banners');
+function banner(text,type){
+  if(!G||G.state==='title')return;
+  const el=document.createElement('div');el.className='banner'+(type?' '+type:'');el.textContent=text;bannerEl.appendChild(el);
+  while(bannerEl.children.length>3)bannerEl.removeChild(bannerEl.firstChild);
+  setTimeout(()=>el.remove(),type==='bad'?3600:2800);
+}
+
+// ---------------- COMBAT ----------------
+const isHostile=m=>m.kind==='bear'||m.kind==='bigbear'||m.kind==='raider'||m.kind==='brute'||m.kind==='chief';
+function hurt(t,dmg,src){
+  if(!t||t.dead)return;
+  if(t.kind==='player'){if(t.inv>0||G.godMode||G.freeMode)return;t.inv=BAL.player.iframe;G.cam.shake=Math.min(10,G.cam.shake+5);}
+  dmg=Math.round(dmg);t.hp-=dmg;t.hitFlash=.12;
+  floatText(t.x+rand(-6,6),t.y-30,'-'+dmg,t.kind==='player'||t.kind==='res'||t.kind==='building'?'#ff8a7a':'#ffffff');
+  if(src&&(t.kind==='player'||t.kind==='res'||t.kind==='bear'||t.kind==='bigbear'||t.kind==='deer'||t.kind==='raider'||t.kind==='brute')){
+    const a=Math.atan2(t.y-src.y,t.x-src.x),k=t.kind==='bear'||t.kind==='bigbear'?3:7;
+    moveUnit(t,Math.cos(a)*k,Math.sin(a)*k,isHostile(t)||t.kind==='deer');
+  }
+  if((t.kind==='bear'||t.kind==='bigbear')&&src){t.provoke=src;t.provT=6;}
+  if(t.kind==='deer'&&src){t.flee=src;t.fleeT=src.kind==='res'?1.5:4;}
+  for(let i=0;i<4;i++)G.parts.push({x:t.x,y:t.y-14,vx:rand(-70,70),vy:rand(-90,-10),life:0,max:.35,c:t.kind==='building'||t.kind==='struct'?'#9a6b3f':'#ffffff',s:2,g:200});
+  if(t.hp<=0)kill(t,src);
+}
+function dropAt(x,y,type,n){
+  for(let i=0;i<n;i++)G.drops.push({x:x+rand(-16,16),y:y+rand(-12,12),type,t:0,bob:Math.random()*TAU});
+}
+function kill(t,src){
+  t.dead=true;t.hp=0;
+  if(t.kind==='player'){gameOver('リーダーが倒れた。');return;}
+  if(t.kind==='res'){G.residents=G.residents.filter(u=>u!==t);G.stats.deaths++;banner('住民が倒れた（残り'+G.residents.length+'人）','bad');puff(t.x,t.y,10,'#c9d6e2');
+    if(G.residents.length===0)gameOver('住民が全滅した。');return;}
+  if(t.kind==='building'){
+    if(t.type==='campfire'){gameOver('キャンプファイヤーが破壊された。');return;}
+    G.buildings=G.buildings.filter(b=>b!==t);banner(t.name+'が破壊された','bad');puff(t.x,t.y,20,'#8a5a33');rebuildObstacles();return;
+  }
+  if(t.kind==='struct'){
+    puff(t.x,t.y,40,'#8a5a33');dropAt(t.x,t.y,'wood',t.type==='base'?20:12);
+    if(t.type==='outpost'){G.stats.outpost=1;G.res.tp+=BAL.tpGain.outpost;banner('敵の小拠点を破壊した！ 襲撃の頻度が下がる','good');}
+    else{G.res.tp+=BAL.tpGain.base;banner('敵の大型拠点を破壊した！ 襲撃の頻度が下がる','good');}
+    return;
+  }
+  // mobs
+  G.stats.kills++;
+  const d=t.def.drop;if(d)dropAt(t.x,t.y,d[0],t.kind==='deer'?d[1]:Math.round(d[1]*(t.lv>1.3?1.5:1)));
+  puff(t.x,t.y,10,t.kind==='bear'||t.kind==='bigbear'?'#f4f7fa':'#c58a5b');
+  if(t.kind==='bear'||t.kind==='bigbear'){G.stats.bears++;G.res.tp+=BAL.tpGain.bear;G.respawn.push({kind:t.kind,t:40});}
+  if(t.kind==='deer')G.respawn.push({kind:'deer',t:25});
+  if(t.kind==='chief'){G.stats.chief=1;banner('部族の首長を倒した！','good');}
+}
+function inArc(p,o,reach){const d=dist(p.x,p.y,o.x,o.y);if(d>reach)return false;if(d<18)return true;return Math.abs(angDiff(Math.atan2(o.y-p.y,o.x-p.x),p.face))<BAL.player.axeArc;}
+
+// movement with optional fence blocking (enemies & wildlife are blocked by intact fences)
+function moveUnit(u,dx,dy,block){
+  let blocked=null;const ox=u.x,oy=u.y;
+  let nx=ox+dx;
+  if(block){const f=fenceCross(ox,oy,nx,oy);if(f){nx=ox;blocked=f;}}
+  let ny=oy+dy;
+  if(block){const f=fenceCross(nx,oy,nx,ny);if(f){ny=oy;blocked=blocked||f;}}
+  u.x=nx;u.y=ny;pushOut(u);
+  if(block&&fenceCross(nx,ny,u.x,u.y)){u.x=nx;u.y=ny;}
+  u.x=clamp(u.x,8,G.W-8);u.y=clamp(u.y,8,G.H-8);
+  return blocked;
+}
+function moveToward(u,tx,ty,spd,dt,block){
+  const dx=tx-u.x,dy=ty-u.y,d=Math.hypot(dx,dy);if(d<1)return {arrived:true};
+  const s=Math.min(d,spd*dt);let a=Math.atan2(dy,dx);u.face=a;u.moving=true;u.walk+=dt*spd/18;
+  // simple unstuck steering: if an obstacle stops us head-on, slide sideways for a moment
+  if(u.sideT>0){u.sideT-=dt;a+=u.side*1.25;}
+  const ox=u.x,oy=u.y;
+  const b=moveUnit(u,Math.cos(a)*s,Math.sin(a)*s,block);
+  const moved=Math.hypot(u.x-ox,u.y-oy);
+  if(!b&&s>0.5&&moved<s*0.3){u.stuckT=(u.stuckT||0)+dt;if(u.stuckT>0.25){u.stuckT=0;u.side=Math.random()<.5?-1:1;u.sideT=0.6;}}else u.stuckT=0;
+  return {arrived:d<4,blocked:b};
+}
+
+// ---------------- PLAYER ----------------
+function playerAttack(){
+  const p=G.player,B=BAL.player;
+  if(p.weapon==='bow'){
+    p.atkT=B.bowCd;const a=p.face;
+    G.proj.push({x:p.x+Math.cos(a)*14,y:p.y-14+Math.sin(a)*14,vx:Math.cos(a)*B.arrowSpeed,vy:Math.sin(a)*B.arrowSpeed,dmg:B.bowDmg*wMul(),life:.75,team:'ally',src:p});
+    return;
+  }
+  p.atkT=B.axeCd;p.swing=1;
+  const dmg=B.axeDmg*wMul();let hit=false;
+  for(const m of G.mobs)if(!m.dead&&inArc(p,m,B.axeReach+m.r)){hurt(m,dmg,p);hit=true;}
+  for(const s of G.structs)if(!s.dead&&inArc(p,s,B.axeReach+s.r)){hurt(s,dmg,p);hit=true;}
+  let best=null,bd=1e9;
+  for(const t of G.trees){if(t.wood<=0)continue;if(Math.abs(t.x-p.x)>110||Math.abs(t.y-p.y)>110)continue;
+    if(inArc(p,t,B.axeReach+t.r)){const d=dist(p.x,p.y,t.x,t.y);if(d<bd){bd=d;best=t;}}}
+  if(best&&!hit)chopTree(best,p);
+}
+function bagTotal(){const b=G.player.bag;return b.wood+b.raw;}
+function chopTree(t,by){
+  t.wood--;t.shake=.25;
+  for(let i=0;i<4;i++)G.parts.push({x:t.x+rand(-8,8),y:t.y-16,vx:rand(-80,80),vy:rand(-120,-30),life:0,max:.5,c:i%2?'#c8955b':'#ffffff',s:2.5,g:260});
+  if(t.wood<=0){t.regrow=110;}
+  if(by===G.player){
+    if(bagTotal()<BAL.player.bag){G.player.bag.wood++;floatText(t.x,t.y-50,'+1 木材','#f3c94c');}
+    else{dropAt(t.x,t.y,'wood',1);floatText(t.x,t.y-50,'背負い袋がいっぱい','#ff8a7a');}
+  }
+}
+function contextAction(){
+  const p=G.player;
+  for(const s of G.sites.values())if(dist(p.x,p.y,s.x,s.y)<CELL*0.75)return {type:'site',o:s,label:'E: 拡張を建設'};
+  for(const b of G.buildings)if(!b.built&&!b.dead&&dist(p.x,p.y,b.x,b.y)<70)return {type:'build',o:b,label:'E: '+b.name+'を建設'};
+  if(dist(p.x,p.y,G.campfire.x,G.campfire.y)<90){
+    if(G.res.raw>0)return {type:'cook',o:G.campfire,label:'E: 生肉を焼く'};
+  }
+  let bf=null,bd=40;
+  for(const f of G.fences.values()){if(f.hp>=f.maxHp)continue;const d=distToSeg(p.x,p.y,f.x1,f.y1,f.x2,f.y2);if(d<bd){bd=d;bf=f;}}
+  if(bf)return {type:'repair',o:bf,label:'E: 柵を修理'};
+  for(const b of G.buildings)if(b.built&&!b.dead&&b.hp<b.maxHp&&dist(p.x,p.y,b.x,b.y)<60)return {type:'repairB',o:b,label:'E: '+b.name+'を修理'};
+  if(dist(p.x,p.y,G.campfire.x,G.campfire.y)<90&&G.res.raw===0&&G.player.bag.raw>0)return {type:'none',label:'生肉は領地に入ると倉庫へ入る'};
+  return null;
+}
+function updPlayer(dt){
+  const p=G.player,B=BAL.player;
+  p.atkT-=dt;p.dodgeCd-=dt;p.inv-=dt;p.eatCd-=dt;p.hitFlash-=dt;p.swing=Math.max(0,p.swing-dt*5);
+  let mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),my=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  let l=Math.hypot(mx,my);if(l){mx/=l;my/=l;}
+  if(TOUCH&&stick.id!==null){const m=Math.hypot(stick.vx,stick.vy);if(m>0.18){const k=Math.min(1,0.35+m*0.75)/m;mx=stick.vx*k;my=stick.vy*k;l=1;}}
+  if(TOUCH){autoAim(p,mx,my,l);}else{p.face=Math.atan2(mouse.wy-(p.y-12),mouse.wx-p.x);G.aimT=null;}
+  if(p.dodgeT>0){p.dodgeT-=dt;moveUnit(p,p.dvx*dt,p.dvy*dt,false);if(Math.random()<.6)G.parts.push({x:p.x,y:p.y,vx:0,vy:-10,life:0,max:.3,c:'#ffffff',s:3,g:0});}
+  else{
+    const outside=!ownedAt(p.x,p.y);
+    const sp=B.speed*(outside&&G.weather.bl>.5?0.85:1);
+    moveUnit(p,mx*sp*dt,my*sp*dt,false);p.moving=!!l;if(l)p.walk+=dt*10;
+  }
+  if(!ownedAt(p.x,p.y))G.stats.leftHome=1;
+  if(((mouse.down&&!G.mode&&mouse.in)||touchAtk)&&p.atkT<=0)playerAttack();
+  // E action
+  G.ctxAct=contextAction();
+  if(keys.KeyE&&G.ctxAct){
+    const a=G.ctxAct;
+    if(a.type==='site'){a.o.work+=B.buildRate*dt;if(Math.random()<.3)puff(a.o.x+rand(-20,20),a.o.y+rand(-10,10),1,'#c8955b');if(a.o.work>=a.o.need)completeExpand(a.o);}
+    else if(a.type==='build'){a.o.work+=B.buildRate*dt;if(a.o.work>=a.o.need)completeBuild(a.o);}
+    else if(a.type==='cook'){G.cookP+=dt/B.cookTime;}
+    else if(a.type==='repair'){const was=a.o.hp;a.o.hp=Math.min(a.o.maxHp,a.o.hp+B.repairRate*dt);if(was<=0&&a.o.hp>0)G.flowDirty=true;}
+    else if(a.type==='repairB'){a.o.hp=Math.min(a.o.maxHp,a.o.hp+B.repairRate*dt);}
+  }else if(keys.KeyE&&p.atkT<=0&&p.weapon==='axe'){
+    // E also chops / strikes like a swing when nothing else is nearby
+    let near=G.trees.some(t=>t.wood>0&&dist(p.x,p.y,t.x,t.y)<B.axeReach+t.r);
+    if(near)playerAttack();
+  }
+  // pickup drops into the bag
+  for(const d of G.drops){
+    if(d.dead)continue;
+    const dd=dist(p.x,p.y,d.x,d.y);
+    if(dd<46){
+      if(bagTotal()<B.bag){d.dead=true;p.bag[d.type]++;}
+    }
+  }
+  // deposit when inside the territory
+  if(ownedAt(p.x,p.y)&&bagTotal()>0){
+    const w=p.bag.wood?addRes('wood',p.bag.wood,true):0;
+    const r=p.bag.raw?addRes('raw',p.bag.raw,false):0;
+    p.bag.wood-=w;p.bag.raw-=r;
+    if(w)floatText(p.x,p.y-44,'+'+w+' 木材','#f3c94c');
+    if(r)floatText(p.x,p.y-60,'+'+r+' 生肉','#ff9a8a');
+  }
+}
+// touch aim assist: face the nearest creature/structure in reach, else a tree, else the walking direction
+function autoAim(p,mx,my,moving){
+  const range=p.weapon==='bow'?420:150;let best=null,bd=range;
+  for(const m of G.mobs){if(m.dead)continue;const d=dist(p.x,p.y,m.x,m.y)-(isHostile(m)?40:0);if(d<bd){bd=d;best=m;}}
+  for(const s of G.structs){if(s.dead)continue;const d=dist(p.x,p.y,s.x,s.y)-s.r;if(d<bd){bd=d;best=s;}}
+  if(!best&&p.weapon==='axe'){let td=105;for(const t of G.trees){if(t.wood<=0||Math.abs(t.x-p.x)>110||Math.abs(t.y-p.y)>110)continue;const d=dist(p.x,p.y,t.x,t.y);if(d<td){td=d;best=t;}}}
+  G.aimT=best;
+  if(best)p.face=Math.atan2(best.y-p.y,best.x-p.x);
+  else if(moving)p.face=Math.atan2(my,mx);
+}
+function playerDodge(){
+  const p=G.player;if(p.dodgeCd>0||p.dodgeT>0)return;
+  let mx=(keys.KeyD?1:0)-(keys.KeyA?1:0),my=(keys.KeyS?1:0)-(keys.KeyW?1:0);
+  if(TOUCH&&stick.id!==null&&Math.hypot(stick.vx,stick.vy)>0.18){mx=stick.vx;my=stick.vy;}
+  if(!mx&&!my){mx=Math.cos(p.face);my=Math.sin(p.face);}
+  const l=Math.hypot(mx,my);p.dvx=mx/l*BAL.player.dodgeSpeed;p.dvy=my/l*BAL.player.dodgeSpeed;
+  p.dodgeT=BAL.player.dodgeTime;p.dodgeCd=BAL.player.dodgeCd;p.inv=Math.max(p.inv,BAL.player.dodgeTime+0.08);
+}
+function playerEat(){
+  const p=G.player;if(p.eatCd>0)return;
+  if(G.res.cooked<=0){banner('焼肉がない','bad');return;}
+  if(p.hp>=p.maxHp){banner('HPは満タン');return;}
+  G.res.cooked--;p.hp=Math.min(p.maxHp,p.hp+BAL.player.eatHeal);p.eatCd=1;floatText(p.x,p.y-40,'+'+BAL.player.eatHeal+' HP','#86d68f');
+}
+
+// ---------------- RESIDENT AI ----------------
+function nearestHostile(x,y,r,filter){
+  let best=null,bd=r;
+  for(const m of G.mobs){if(m.dead||!isHostile(m))continue;if(filter&&!filter(m))continue;const d=dist(x,y,m.x,m.y);if(d<bd){bd=d;best=m;}}
+  return best;
+}
+function wanderNear(u,cx,cy,rad,spd,dt){
+  u.t-=dt;
+  if(!u.wp||u.t<=0){const a=Math.random()*TAU,d=Math.random()*rad;u.wp={x:cx+Math.cos(a)*d,y:cy+Math.sin(a)*d};u.t=rand(2,5);}
+  const r=moveToward(u,u.wp.x,u.wp.y,spd*0.5,dt,false);if(r.arrived)u.moving=false;
+}
+function updResident(u,dt){
+  u.cd-=dt;u.hitFlash-=dt;u.moving=false;
+  const e=effMul(),spd=BAL.res.speed*(G.hunger>0?0.8:1);
+  const cf=G.campfire;
+  if(u.hp<u.maxHp&&G.hunger===0)u.hp=Math.min(u.maxHp,u.hp+dt*0.4);
+  // non-combat roles flee from threats
+  if(u.role!=='guard'&&u.role!=='hunter'){
+    const th=nearestHostile(u.x,u.y,130);
+    if(th){u.state='避難';const a=Math.atan2(cf.y-u.y,cf.x-u.x);moveToward(u,cf.x+Math.cos(a+1)*40,cf.y+Math.sin(a+1)*40,spd*1.2,dt,false);return;}
+  }
+  const terrR=G.terrR;
+  switch(u.role){
+    case 'idle':u.state='休憩中';wanderNear(u,cf.x,cf.y,90,spd,dt);break;
+    case 'cook':{
+      const idx=G.residents.filter(r=>r.role==='cook').indexOf(u);const a=idx*1.3+0.6;
+      const tx=cf.x+Math.cos(a)*44,ty=cf.y+Math.sin(a)*34;
+      if(dist(u.x,u.y,tx,ty)>6)moveToward(u,tx,ty,spd,dt,false);
+      else{u.face=Math.atan2(cf.y-u.y,cf.x-u.x);}
+      u.state=G.res.raw>0?'調理中':'生肉待ち';
+      break;}
+    case 'lumber':{
+      if(u.carry&&u.carry.n>=BAL.res.carry){deliver(u,spd,dt);u.state='運搬中';break;}
+      let t=u.job;
+      if(!t||t.wood<=0||t.kind!=='tree'){
+        t=null;let bd=1e9;const R=terrR+CELL*4;
+        for(const tr of G.trees){if(tr.wood<=0)continue;const dc=dist(tr.x,tr.y,cf.x,cf.y);if(dc>R)continue;
+          const d=dist(u.x,u.y,tr.x,tr.y)+G.residents.filter(o=>o!==u&&o.job===tr).length*200;if(d<bd){bd=d;t=tr;}}
+        u.job=t;
+      }
+      if(!t){if(u.carry&&u.carry.n>0){deliver(u,spd,dt);}else{u.state='木が見つからない';wanderNear(u,cf.x,cf.y,80,spd,dt);}break;}
+      const d=dist(u.x,u.y,t.x,t.y);
+      if(d>t.r+16){moveToward(u,t.x,t.y,spd,dt,false);u.state='木へ移動';}
+      else{u.state='伐採中';u.face=Math.atan2(t.y-u.y,t.x-u.x);u.t-=dt*e;u.swing=Math.max(0,(u.swing||0)-dt*4);
+        if(u.t<=0){u.t=BAL.res.chopTime;u.swing=1;chopTree(t,u);u.carry=u.carry||{type:'wood',n:0};u.carry.n++;if(t.wood<=0)u.job=null;}}
+      break;}
+    case 'builder':{
+      let j=u.job;
+      const valid=j&&((j.kind==='site'&&G.sites.has(cellIdx(j.cx,j.cy)))||(j.kind==='building'&&!j.built&&!j.dead)||(j.kind==='fence'&&G.fences.get(j.key)===j&&j.hp<j.maxHp)||(j.kind==='buildingR'&&false));
+      if(!valid){
+        j=null;let bd=1e9;
+        for(const s of G.sites.values()){const d=dist(u.x,u.y,s.x,s.y);if(d<bd){bd=d;j=s;}}
+        for(const b of G.buildings)if(!b.built&&!b.dead){const d=dist(u.x,u.y,b.x,b.y);if(d<bd){bd=d;j=b;}}
+        if(!j){bd=1e9;for(const f of G.fences.values()){if(f.hp>=f.maxHp)continue;const d=dist(u.x,u.y,f.x,f.y)-(f.maxHp-f.hp)*2;if(d<bd){bd=d;j=f;}}}
+        u.job=j;
+      }
+      if(!j){u.state='待機（作業なし）';wanderNear(u,cf.x,cf.y,100,spd,dt);break;}
+      const tx=j.x-(j.kind==='fence'?j.nx*14:0),ty=j.y-(j.kind==='fence'?j.ny*14:0)+(j.kind==='building'?20:0);
+      if(dist(u.x,u.y,tx,ty)>(j.kind==='fence'?14:30)){moveToward(u,tx,ty,spd,dt,false);u.state='現場へ移動';}
+      else{
+        u.swing=Math.max(0,(u.swing||0)-dt*4);if(Math.random()<dt*3)u.swing=1;
+        if(j.kind==='site'){u.state='拡張作業中';j.work+=BAL.res.buildRate*e*dt;if(j.work>=j.need)completeExpand(j);}
+        else if(j.kind==='building'){u.state='建築中';j.work+=BAL.res.buildRate*e*dt;if(j.work>=j.need)completeBuild(j);}
+        else{u.state='柵を修理中';const was=j.hp;j.hp=Math.min(j.maxHp,j.hp+BAL.res.repairRate*e*dt);if(was<=0&&j.hp>0)G.flowDirty=true;}
+      }
+      break;}
+    case 'guard':{
+      const leash=terrR+CELL*2.5;
+      const th=nearestHostile(u.x,u.y,260,m=>dist(m.x,m.y,cf.x,cf.y)<leash+CELL);
+      if(th){
+        u.state='交戦中';const d=dist(u.x,u.y,th.x,th.y)-th.r;
+        if(d>22)moveToward(u,th.x,th.y,spd*1.1,dt,false);
+        else{u.face=Math.atan2(th.y-u.y,th.x-u.x);if(u.cd<=0){u.cd=BAL.res.guardCd;u.swing=1;hurt(th,BAL.res.guardDmg*defMul()*(G.hunger>0?0.6:1),u);}}
+        u.swing=Math.max(0,(u.swing||0)-dt*4);break;
+      }
+      if(dist(u.x,u.y,cf.x,cf.y)>leash){moveToward(u,cf.x,cf.y,spd,dt,false);u.state='持ち場へ戻る';break;}
+      u.state='巡回中';u.t-=dt;
+      if(!u.wp||u.t<=0){const fs=[...G.fences.values()];if(fs.length){const f=pick(fs);u.wp={x:f.x-f.nx*26,y:f.y-f.ny*26};}u.t=rand(4,8);}
+      if(u.wp){const r=moveToward(u,u.wp.x,u.wp.y,spd*0.6,dt,false);if(r.arrived)u.moving=false;}
+      break;}
+    case 'hunter':{
+      u.retreat-=dt;u.swing=Math.max(0,(u.swing||0)-dt*3);
+      const range=terrR+CELL*8;
+      const bear=nearestHostile(u.x,u.y,190,m=>m.kind==='bear'||m.kind==='bigbear'||m.kind==='chief');
+      if(bear){u.retreat=5;}
+      if(u.retreat>0){u.state='撤退中';moveToward(u,cf.x,cf.y,spd*1.15,dt,false);
+        const r=nearestHostile(u.x,u.y,230,m=>m.kind==='raider'||m.kind==='brute');if(r&&u.cd<=0)hunterShoot(u,r);break;}
+      const raider=nearestHostile(u.x,u.y,230,m=>m.kind==='raider'||m.kind==='brute');
+      if(raider){u.state='射撃中';u.face=Math.atan2(raider.y-u.y,raider.x-u.x);if(u.cd<=0)hunterShoot(u,raider);break;}
+      if(u.carry&&u.carry.n>=BAL.res.carry){deliver(u,spd,dt);u.state='運搬中';break;}
+      // pick up raw meat lying nearby
+      let dr=null,dd=1e9;for(const d of G.drops){if(d.dead||d.type!=='raw')continue;if(dist(d.x,d.y,cf.x,cf.y)>range)continue;const k=dist(u.x,u.y,d.x,d.y);if(k<dd){dd=k;dr=d;}}
+      if(dr&&dd<400){u.state='肉を回収';if(dd>14)moveToward(u,dr.x,dr.y,spd,dt,false);else{dr.dead=true;u.carry=u.carry||{type:'raw',n:0};u.carry.type='raw';u.carry.n++;}break;}
+      let prey=null,pd=1e9;for(const m of G.mobs){if(m.dead||m.kind!=='deer')continue;if(dist(m.x,m.y,cf.x,cf.y)>range)continue;const k=dist(u.x,u.y,m.x,m.y);if(k<pd){pd=k;prey=m;}}
+      if(prey){
+        if(pd>250){moveToward(u,prey.x,prey.y,spd,dt,false);u.state='獲物を追跡';}
+        else{u.state='狩猟中';u.face=Math.atan2(prey.y-u.y,prey.x-u.x);if(u.cd<=0)hunterShoot(u,prey);}
+        break;
+      }
+      if(u.carry&&u.carry.n>0){deliver(u,spd,dt);u.state='運搬中';break;}
+      u.state='獲物を探索';wanderNear(u,cf.x,cf.y,terrR+CELL*2,spd,dt);
+      break;}
+  }
+}
+function hunterShoot(u,t){
+  u.cd=BAL.res.hunterCd;u.swing=1;const a=Math.atan2(t.y-u.y,t.x-u.x);
+  G.proj.push({x:u.x,y:u.y-10,vx:Math.cos(a)*560,vy:Math.sin(a)*560,dmg:BAL.res.hunterDmg*defMul(),life:.75,team:'ally',src:u});
+}
+function deliver(u,spd,dt){
+  const d=depotFor(u.x,u.y);
+  if(dist(u.x,u.y,d.x,d.y)>40){moveToward(u,d.x,d.y,spd,dt,false);return;}
+  if(u.carry){
+    const a=addRes(u.carry.type,u.carry.n,u.carry.type==='wood');
+    if(a)floatText(u.x,u.y-30,'+'+a+(u.carry.type==='wood'?' 木材':' 生肉'),u.carry.type==='wood'?'#f3c94c':'#ff9a8a');
+    u.carry=null;
+  }
+}
+
+// ---------------- MOB AI ----------------
+function unitTargets(m,range,allowOwned){
+  let best=null,bd=range;
+  const consider=o=>{if(!o||o.dead)return;if(!allowOwned&&ownedAt(o.x,o.y))return;const d=dist(m.x,m.y,o.x,o.y);if(d<bd){bd=d;best=o;}};
+  if(!G.freeMode)consider(G.player);
+  for(const u of G.residents)consider(u);
+  return best;
+}
+function meleeOrApproach(m,t,dt,spd){
+  const d=dist(m.x,m.y,t.x,t.y)-(t.r||0);
+  m.face=Math.atan2(t.y-m.y,t.x-m.x);
+  if(m.wind>0){m.wind-=dt;m.moving=false;if(m.wind<=0){m.cd=m.def.cd;m.atk=.25;if(d<=m.def.reach+12)hurt(t,m.dmg,m);}return null;}
+  if(d<=m.def.reach){m.moving=false;if(m.cd<=0)m.wind=m.def.wind||.3;return null;}
+  const r=moveToward(m,t.x,t.y,spd,dt,true);
+  return r.blocked||null;
+}
+function attackFence(m,f,mul){
+  m.face=Math.atan2(f.y-m.y,f.x-m.x);m.moving=false;
+  if(m.cd<=0){m.cd=m.def.cd;m.atk=.25;damageFence(f,m.dmg*1.2*(mul||1));}
+}
+function updMob(m,dt){
+  m.cd-=dt;m.hitFlash-=dt;m.atk=Math.max(0,m.atk-dt);m.moving=false;
+  const k=m.kind;
+  if(k==='deer')return updDeer(m,dt);
+  if(k==='bear'||k==='bigbear')return updBear(m,dt);
+  if(k==='chief')return updChief(m,dt);
+  return updRaider(m,dt);
+}
+function updDeer(m,dt){
+  m.fleeT=(m.fleeT||0)-dt;
+  let threat=null,td=170;
+  for(const o of [G.player,...G.residents.filter(u=>u.role==='hunter')]){const d=dist(m.x,m.y,o.x,o.y);if(d<(o.kind==='player'?170:110)&&d<td){td=d;threat=o;}}
+  if(m.fleeT>0&&m.flee)threat=m.flee;
+  if(threat){const a=Math.atan2(m.y-threat.y,m.x-threat.x)+Math.sin(G.time*2+m.walk)*.4;moveToward(m,m.x+Math.cos(a)*60,m.y+Math.sin(a)*60,m.speed,dt,true);return;}
+  m.t=(m.t||0)-dt;
+  if(!m.wp||m.t<=0){const a=Math.random()*TAU,d=rand(30,160);m.wp={x:m.home.x+Math.cos(a)*d,y:m.home.y+Math.sin(a)*d};m.t=rand(3,7);}
+  const r=moveToward(m,m.wp.x,m.wp.y,40,dt,true);if(r.arrived||r.blocked){m.moving=false;m.wp=null;}
+}
+function updBear(m,dt){
+  m.provT-=dt;
+  const hd=dist(m.x,m.y,m.home.x,m.home.y);
+  if(m.mode==='return'){if(hd<120)m.mode='wander';else{moveToward(m,m.home.x,m.home.y,m.speed,dt,true);return;}}
+  let t=null;
+  if(m.provT>0&&m.provoke&&!m.provoke.dead&&!ownedAt(m.provoke.x,m.provoke.y))t=m.provoke;
+  if(!t)t=unitTargets(m,m.def.aggro,false);
+  if(t&&hd<480){
+    const b=meleeOrApproach(m,t,dt,m.speed*1.35);
+    if(b){m.blockT=(m.blockT||0)+dt;if(m.blockT>1.5){m.mode='return';m.blockT=0;m.provT=0;}}
+    return;
+  }
+  if(hd>=480){m.mode='return';return;}
+  m.t=(m.t||0)-dt;
+  if(!m.wp||m.t<=0){const a=Math.random()*TAU,d=rand(40,220);m.wp={x:m.home.x+Math.cos(a)*d,y:m.home.y+Math.sin(a)*d};m.t=rand(4,9);}
+  const r=moveToward(m,m.wp.x,m.wp.y,m.speed*0.5,dt,true);if(r.arrived||r.blocked){m.moving=false;m.wp=null;}
+}
+function updRaider(m,dt){
+  const inside=ownedAt(m.x,m.y);
+  if(m.mode==='defend'){
+    const s=m.struct;const anchor=s&&!s.dead?s:m.home;
+    const t=unitTargets(m,260,true);
+    if(t&&dist(m.x,m.y,anchor.x,anchor.y)<460){meleeOrApproach(m,t,dt,m.speed);return;}
+    if(dist(m.x,m.y,anchor.x,anchor.y)>110){moveToward(m,anchor.x,anchor.y,m.speed*0.8,dt,true);return;}
+    m.t=(m.t||0)-dt;if(!m.wp||m.t<=0){const a=Math.random()*TAU;m.wp={x:anchor.x+Math.cos(a)*80,y:anchor.y+Math.sin(a)*80};m.t=rand(2,5);}
+    moveToward(m,m.wp.x,m.wp.y,m.speed*0.4,dt,true);return;
+  }
+  // raid mode
+  let t=unitTargets(m,inside?190:m.def.aggro,true);
+  if(!t&&inside){let bd=170;for(const b of G.buildings){if(b.dead)continue;const d=dist(m.x,m.y,b.x,b.y);if(d<bd){bd=d;t=b;}}}
+  if(t){const b=meleeOrApproach(m,t,dt,m.speed);if(b)attackFence(m,b);return;}
+  if(G.flowDirty||!G.flow)computeFlow();
+  const st=flowStep(m);
+  if(st.home){const b=meleeOrApproach(m,G.campfire,dt,m.speed);if(b)attackFence(m,b);return;}
+  const nc=cellCenter(st.nx,st.ny);
+  if(st.fence){
+    const f=st.fence;const ex=f.x+(m.x>f.x+1?6:m.x<f.x-1?-6:0),ey=f.y+(m.y>f.y+1?6:m.y<f.y-1?-6:0);
+    const tx=f.x1===f.x2?f.x1+(m.x<f.x1?-12:12):clamp(m.x,f.x1+10,f.x2-10);
+    const ty=f.y1===f.y2?f.y1+(m.y<f.y1?-12:12):clamp(m.y,f.y1+10,f.y2-10);
+    if(dist(m.x,m.y,tx,ty)<6){attackFence(m,f);return;}
+    const r=moveToward(m,tx,ty,m.speed,dt,true);if(r.blocked)attackFence(m,r.blocked);
+    return;
+  }
+  const r=moveToward(m,nc.x,nc.y,m.speed,dt,true);if(r.blocked)attackFence(m,r.blocked);
+}
+function updChief(m,dt){
+  m.chargeCd-=dt;
+  if(m.charge>0){
+    m.charge-=dt;
+    const b=moveUnit(m,m.chx*400*dt,m.chy*400*dt,true);
+    if(b){damageFence(b,40);m.charge=0;}
+    const hitIt=o=>{if(!o||o.dead||m.hitSet.has(o))return;if(dist(m.x,m.y,o.x,o.y)<m.r+o.r+6){m.hitSet.add(o);hurt(o,30,m);}};
+    hitIt(G.player);G.residents.forEach(hitIt);
+    for(let i=0;i<2;i++)G.parts.push({x:m.x+rand(-10,10),y:m.y,vx:rand(-30,30),vy:rand(-40,-10),life:0,max:.4,c:'#ffffff',s:3,g:0});
+    return;
+  }
+  if(m.tele>0){m.tele-=dt;m.moving=false;if(m.tele<=0){m.charge=.55;m.hitSet=new Set();}return;}
+  const anchor=m.struct&&!m.struct.dead?m.struct:m.home;
+  const assault=G.raid.chiefSent;
+  let t=unitTargets(m,assault?240:m.def.aggro,true);
+  if(!assault&&t&&dist(m.x,m.y,anchor.x,anchor.y)>700)t=null;
+  if(t){
+    const d=dist(m.x,m.y,t.x,t.y);
+    if(m.chargeCd<=0&&d<300&&d>80){m.chargeCd=5.5;m.tele=.65;const a=Math.atan2(t.y-m.y,t.x-m.x);m.chx=Math.cos(a);m.chy=Math.sin(a);m.face=a;return;}
+    const b=meleeOrApproach(m,t,dt,m.speed);if(b)attackFence(m,b,3);return;
+  }
+  if(!assault){
+    if(dist(m.x,m.y,anchor.x,anchor.y)>90)moveToward(m,anchor.x,anchor.y,m.speed*.7,dt,true);
+    return;
+  }
+  if(G.flowDirty||!G.flow)computeFlow();
+  const st=flowStep(m);
+  if(st.home){const b=meleeOrApproach(m,G.campfire,dt,m.speed);if(b)attackFence(m,b,3);return;}
+  if(st.fence){const r=moveToward(m,st.fence.x,st.fence.y,m.speed,dt,true);if(r.blocked)attackFence(m,r.blocked,3);else if(dist(m.x,m.y,st.fence.x,st.fence.y)<20)attackFence(m,st.fence,3);return;}
+  const nc=cellCenter(st.nx,st.ny);const r=moveToward(m,nc.x,nc.y,m.speed,dt,true);if(r.blocked)attackFence(m,r.blocked,3);
+}
+function updStruct(s,dt){
+  if(s.dead)return;s.hitFlash-=dt;s.spawnT-=dt;
+  s.defs=s.defs.filter(d=>!d.dead);
+  const pd=dist(G.player.x,G.player.y,s.x,s.y);
+  const max=BAL.struct[s.type].maxDef;
+  if(pd<700&&s.defs.length<max&&s.spawnT<=0&&!G.freeMode){
+    const a=Math.random()*TAU;const kind=s.type==='base'&&Math.random()<.4?'brute':'raider';
+    const m=makeMob(kind,s.x+Math.cos(a)*(s.r+20),s.y+Math.sin(a)*(s.r+20),{mode:'defend',struct:s,lv:s.type==='base'?1.25:1.1});
+    s.defs.push(m);s.spawnT=s.defs.length<2?2:7;
+  }
+}
+
+// ---------------- RAIDS ----------------
+function raidSpawnPoint(ang){
+  const c=cellCenter(G.cfx,G.cfy);const R=G.W*0.47;
+  return {x:clamp(c.x+Math.cos(ang)*R,40,G.W-40),y:clamp(c.y+Math.sin(ang)*R,40,G.H-40)};
+}
+function warnRaid(plan){
+  G.raid.warn=plan;plan.t=plan.warn||15;
+  const dirs=plan.angs.map(dirName).join('・');
+  banner((plan.final?'大規模な敵襲':plan.chief?'首長の軍勢':'敵襲')+'接近！ '+dirs+'から（'+Math.round(plan.t)+'秒後）','bad');
+}
+function launchRaid(plan){
+  const raid={members:[],final:!!plan.final,chief:!!plan.chief,counts:plan.counts!==false};
+  plan.angs.forEach((ang,gi)=>{
+    const sp=plan.from&&plan.from[gi]?plan.from[gi]:raidSpawnPoint(ang);
+    const n=plan.sizes[gi];
+    for(let i=0;i<n;i++){
+      const kind=Math.random()<(plan.brute||0)?'brute':'raider';
+      const m=makeMob(kind,sp.x+rand(-40,40),sp.y+rand(-40,40),{mode:'raid',lv:plan.lv||1});m.raid=raid;raid.members.push(m);
+    }
+  });
+  if(plan.chief){const ch=G.mobs.find(m=>m.kind==='chief'&&!m.dead);if(ch){raid.members.push(ch);}}
+  G.raid.active.push(raid);G.raid.n++;
+  banner(plan.final?'大規模な敵襲が始まった！':plan.chief?'首長が攻めてきた！':'敵襲だ！','bad');
+}
+function objOk(i){if(G.objDone[i])return true;const o=G.sd.objectives[i];if(o.v()>=o.n){G.objDone[i]=true;return true;}return false;}
+function objsDone(n){for(let i=0;i<n;i++)if(!objOk(i))return false;return true;}
+function updRaids(dt){
+  const R=G.raid,sd=G.sd;if(G.freeMode)return;
+  if(R.warn){R.warn.t-=dt;if(R.warn.t<=0){const p=R.warn;R.warn=null;launchRaid(p);}}
+  if(sd.firstRaid&&!R.triggered&&objsDone(5)&&!R.warn){
+    R.triggered=true;const a=Math.random()*TAU;warnRaid({angs:[a],sizes:[sd.firstRaid.size],warn:20,lv:1});
+  }
+  if(sd.raids&&!R.warn){
+    R.t+=dt;
+    if(R.t>=R.next){
+      const k=R.n;const cfg=sd.raids;
+      const struct=G.structs.find(s=>!s.dead);
+      const slow=G.structs.length&&G.structs.every(s=>s.dead)?1.6:1;
+      let angs,from=null;
+      if(cfg.multi){const g=k===0?2:3;const a0=Math.random()*TAU;angs=[];for(let i=0;i<g;i++)angs.push(a0+i*TAU/g+rand(-.3,.3));
+        if(struct){angs[0]=Math.atan2(struct.y-G.campfire.y,struct.x-G.campfire.x);from=[{x:struct.x,y:struct.y+struct.r+30}];}}
+      else{if(struct){angs=[Math.atan2(struct.y-G.campfire.y,struct.x-G.campfire.x)];from=[{x:struct.x,y:struct.y+struct.r+30}];}else angs=[Math.random()*TAU];}
+      const per=cfg.size+cfg.grow*k;
+      warnRaid({angs,from,sizes:angs.map(()=>per),warn:cfg.warn,brute:cfg.brute||0,lv:1+k*0.06});
+      R.next=R.t+cfg.interval*slow+cfg.warn;
+    }
+  }
+  if(sd.finalRaid&&!R.finalSent&&objsDone(6)&&!R.warn){
+    R.finalSent=true;const a=Math.random()*TAU;
+    warnRaid({angs:[a,a+Math.PI*0.7],sizes:[Math.ceil(sd.finalRaid.size/2),Math.floor(sd.finalRaid.size/2)],warn:18,final:true,brute:.25,lv:1.1});
+  }
+  if(sd.chiefAssault&&!R.chiefSent&&objsDone(5)){
+    const ch=G.mobs.find(m=>m.kind==='chief'&&!m.dead);
+    if(ch&&!R.warn){R.chiefSent=true;const a=Math.atan2(ch.y-G.campfire.y,ch.x-G.campfire.x);
+      warnRaid({angs:[a],from:[{x:ch.x,y:ch.y+40}],sizes:[6],warn:12,chief:true,brute:.5,lv:1.2,counts:false});}
+  }
+  for(const raid of R.active){
+    if(raid.done)continue;
+    if(raid.members.every(m=>m.dead)){
+      raid.done=true;
+      if(raid.counts!==false&&!raid.chief){G.stats.raids++;}
+      if(raid.final)G.stats.final=1;
+      G.res.tp+=BAL.tpGain.raid;banner('襲撃を撃退した！ +'+BAL.tpGain.raid+'TP','good');
+    }
+  }
+  R.active=R.active.filter(r=>!r.done);
+}
+
+// ---------------- STAGE FLOW ----------------
+function startStage(si){
+  hideAll();newGame(si);
+  ['top','left','right','bottom'].forEach(id=>$(id).hidden=false);
+  $('stTag').textContent='STAGE '+G.sd.id;$('stName').textContent=G.sd.name;
+  $('cond').hidden=!G.sd.cond;$('cond').textContent=G.sd.cond||'';
+  bannerEl.innerHTML='';
+  hudCache={};buildMenu();
+  // stage 3 chief lives at the base
+  if(G.sd.base){const b=G.structs.find(s=>s.type==='base');const ch=makeMob('chief',b.x,b.y+b.r+36,{mode:'defend',struct:b,lv:1});ch.home={x:b.x,y:b.y+b.r+36};}
+  banner('STAGE '+G.sd.id+'「'+G.sd.name+'」','good');
+  lastHud=0;
+  if(TOUCH){$('touchUI').hidden=false;$('tutil').hidden=false;G.cam.zoom=touchZoom();}
+}
+function stageCleared(){
+  if(G.state!=='play')return;
+  G.state='clear';
+  try{const c=JSON.parse(localStorage.getItem('ff_cleared')||'[]');if(!c.includes(G.sd.id)){c.push(G.sd.id);localStorage.setItem('ff_cleared',JSON.stringify(c));}}catch(e){}
+  const last=G.si===STAGES.length-1;
+  $('clearTag').textContent=last?'ALL STAGES CLEAR':'STAGE '+G.sd.id+' CLEAR';
+  $('clearTitle').textContent=last?'氷雪の要塞、陥落せず':'「'+G.sd.name+'」を越えた';
+  const m=Math.floor(G.time/60),s=Math.floor(G.time%60);
+  const stats=[['プレイ時間',m+'分'+String(s).padStart(2,'0')+'秒'],['集めた木材',G.stats.wood],['倒したクマ',G.stats.bears],['撃退した襲撃',G.stats.raids+G.stats.final],['住民',pop()+'人'],['領地',G.area+'マス']];
+  $('clearStats').innerHTML=stats.map(([k,v])=>'<div><div class="k">'+k+'</div><div class="v">'+v+'</div></div>').join('');
+  const a=$('clearActions');a.innerHTML='';
+  const mk=(t,cls,fn)=>{const b=document.createElement('button');b.textContent=t;if(cls)b.className=cls;b.onclick=fn;a.appendChild(b);};
+  if(!last)mk('次のステージへ','primary',()=>startStage(G.si+1));
+  else mk('発展させた領地を眺める','primary',enterFreeMode);
+  mk('ステージ選択へ','',showTitle);
+  $('clear').hidden=false;
+}
+function enterFreeMode(){
+  $('clear').hidden=true;G.state='play';G.freeMode=true;
+  G.mobs=G.mobs.filter(m=>m.kind==='deer');G.raid.warn=null;G.raid.active=[];
+  for(const s of G.structs)s.dead=true;
+  banner('クリア後モード：自由に領地を眺められます（Escでメニュー）','good');
+}
+function gameOver(reason){
+  if(G.state!=='play')return;G.state='over';
+  $('overReason').textContent=reason+' ステージ'+G.sd.id+'「'+G.sd.name+'」を最初からやり直せます。';
+  $('over').hidden=false;
+}
+function hideAll(){['title','pause','over','clear','manage','drawer'].forEach(id=>$(id).hidden=true);$('tPlace').hidden=true;resetStick();touchAtk=false;$('info').hidden=true;$('tip').hidden=true;$('boss').hidden=true;$('hint').hidden=true;}
+function showTitle(){
+  hideAll();G=null;$('touchUI').hidden=true;$('tutil').hidden=true;
+  ['top','left','right','bottom'].forEach(id=>$(id).hidden=true);bannerEl.innerHTML='';
+  let cleared=[];try{cleared=JSON.parse(localStorage.getItem('ff_cleared')||'[]');}catch(e){}
+  const list=$('stageList');list.innerHTML='';
+  STAGES.forEach((s,i)=>{
+    const b=document.createElement('button');b.className='stg';b.id='stage'+s.id;
+    b.innerHTML='<span class="no">STAGE '+s.id+' ・ '+s.time+'</span><span class="nm">'+s.name+'</span><span class="th">'+s.theme+'</span>'+(cleared.includes(s.id)?'<span class="ok">クリア済み</span>':'');
+    b.onclick=()=>startStage(i);list.appendChild(b);
+  });
+  $('title').hidden=false;
+}
+function checkClear(){
+  if(G.freeMode)return;
+  const all=objsDone(G.sd.objectives.length);
+  if(!all)return;
+  if(G.sd.id===3&&(pop()<5||G.campfire.dead))return;
+  stageCleared();
+}
+
+// ---------------- UPDATE ----------------
+function update(dt){
+  if(!G||G.state!=='play'||G.panel||G.drawer)return;
+  G.time+=dt;G.fenceBreakMsgT-=dt;G.woodFullT-=dt;
+  updPlayer(dt);
+  for(const u of [...G.residents])updResident(u,dt);
+  for(const m of G.mobs)if(!m.dead)updMob(m,dt);
+  G.mobs=G.mobs.filter(m=>!m.dead);
+  for(const s of G.structs)updStruct(s,dt);
+  // towers
+  for(const b of G.buildings){
+    b.hitFlash-=dt;if(b.rise<1)b.rise=Math.min(1,b.rise+dt*2.5);
+    if(!b.built||(b.type!=='tower'&&b.type!=='bigtower'))continue;
+    b.cd-=dt;if(b.cd>0)continue;
+    const t=nearestHostile(b.x,b.y,b.def.range);
+    if(t){b.cd=b.def.rate/(G.tech>=3?1.3:1);const sx=b.x,sy=b.y-(b.type==='bigtower'?70:56);const a=Math.atan2(t.y-12-sy,t.x-sx);
+      G.proj.push({x:sx,y:sy,vx:Math.cos(a)*620,vy:Math.sin(a)*620,dmg:b.def.dmg*defMul(),life:.8,team:'ally',src:b});}
+  }
+  // projectiles
+  for(const pr of G.proj){
+    pr.life-=dt;pr.x+=pr.vx*dt;pr.y+=pr.vy*dt;if(pr.life<=0){pr.dead=true;continue;}
+    for(const m of G.mobs){if(m.dead)continue;if(dist(pr.x,pr.y,m.x,m.y-12)<m.r+6){hurt(m,pr.dmg,pr.src);pr.dead=true;break;}}
+    if(pr.dead)continue;
+    for(const s of G.structs){if(s.dead)continue;if(dist(pr.x,pr.y,s.x,s.y)<s.r){hurt(s,pr.dmg,pr.src);pr.dead=true;break;}}
+  }
+  G.proj=G.proj.filter(p=>!p.dead);
+  // drops: items landing inside the territory get carried in automatically
+  for(const d of G.drops){d.t+=dt;if(!d.dead&&d.t>1.5&&ownedAt(d.x,d.y)){const a=addRes(d.type,1,d.type==='wood');if(a){d.dead=true;floatText(d.x,d.y-10,'+1','#f3c94c');}}}
+  G.drops=G.drops.filter(d=>!d.dead&&d.t<240);
+  // cooking at the campfire
+  const cooks=G.residents.filter(u=>u.role==='cook'&&dist(u.x,u.y,G.campfire.x,G.campfire.y)<80).length;
+  if(G.res.raw>0&&G.res.cooked<cap('cooked'))G.cookP+=cooks*effMul()*dt/BAL.res.cookTime;else if(G.res.raw<=0)G.cookP=Math.min(G.cookP,0.99);
+  while(G.cookP>=1&&G.res.raw>0&&G.res.cooked<cap('cooked')){G.cookP-=1;G.res.raw--;G.res.cooked++;G.stats.cooked++;floatText(G.campfire.x,G.campfire.y-50,'焼肉 +1','#ffb36b');}
+  if(G.cookP>=1)G.cookP=0.99;
+  // food upkeep
+  G.foodT+=dt;
+  if(G.foodT>=BAL.food.interval){
+    G.foodT=0;const need=Math.ceil(pop()/BAL.food.perPop);
+    if(G.res.cooked>=need){G.res.cooked-=need;G.hunger=0;}
+    else{G.res.cooked=0;G.hunger++;
+      if(G.hunger>=2){banner('食料不足で住民が衰弱している！','bad');for(const u of G.residents){u.hp=Math.max(1,u.hp-BAL.food.starveDmg);u.hitFlash=.12;}}
+      else banner('焼肉が足りない！ 住民の作業効率が半減','bad');}
+  }
+  // wildlife respawn
+  for(const r of G.respawn){r.t-=dt;if(r.t<=0){r.done=true;spawnWild(r.kind);}}
+  G.respawn=G.respawn.filter(r=>!r.done);
+  // trees regrow
+  for(const t of G.trees){if(t.shake>0)t.shake-=dt;if(t.wood<=0&&!t.cleared){t.regrow-=dt;if(t.regrow<=0&&!ownedAt(t.x,t.y)){t.wood=t.max;t.grow=0;}}if(t.grow!==undefined&&t.grow<1)t.grow+=dt*2;}
+  // flow refresh while fences are damaged
+  G.flowT-=dt;if(G.flowT<=0){G.flowT=0.6;if(G.flowDirty||G.raid.active.length)computeFlow();}
+  updRaids(dt);
+  // weather
+  const w=G.weather;w.t-=dt;if(w.t<=0){w.target=w.target>0?0:rand(.6,1);w.t=w.target>0?rand(18,30):rand(50,90);if(w.target>0)banner('吹雪だ。領地の外では動きが鈍る');}
+  w.bl=lerp(w.bl,w.target,dt*0.5);w.wind=lerp(w.wind,30+w.bl*160,dt);
+  // fx
+  for(const f of G.fences.values()){if(f.anim<1){if(f.delay>0)f.delay-=dt;else{if(!f.puffed){f.puffed=true;for(let i=0;i<5;i++)G.parts.push({x:f.x+rand(-26,26),y:f.y+rand(-4,4),vx:rand(-30,30),vy:rand(-50,-10),life:0,max:.6,c:'#ffffff',s:rand(2,4),g:40});}f.anim=Math.min(1,f.anim+dt*2.8);}}f.hitFlash-=dt;}
+  for(const f of G.falling)f.fall+=dt*2.2;G.falling=G.falling.filter(f=>f.fall<1);
+  for(const fl of G.flashes)fl.t+=dt;G.flashes=G.flashes.filter(f=>f.t<0.8);
+  for(const p of G.parts){p.life+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=(p.g||0)*dt;}G.parts=G.parts.filter(p=>p.life<p.max);
+  for(const t of G.texts)t.t+=dt;G.texts=G.texts.filter(t=>t.t<1.1);
+  if(Math.random()<dt*14)G.parts.push({x:G.campfire.x+rand(-8,8),y:G.campfire.y-16,vx:rand(-12,12),vy:rand(-70,-40),life:0,max:rand(.6,1.2),c:Math.random()<.5?'#ffb347':'#ff6a2a',s:rand(1.5,3),g:-10,ember:true});
+  checkClear();
+}
+
+// ---------------- RENDER ----------------
+const cv=$('cv'),ctx=cv.getContext('2d');
+const lc=document.createElement('canvas'),lctx=lc.getContext('2d');
+let VW=800,VH=600,DPR=1;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);VW=innerWidth;VH=innerHeight;cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR);cv.style.width=VW+'px';cv.style.height=VH+'px';lc.width=Math.ceil(VW/2);lc.height=Math.ceil(VH/2);}
+addEventListener('resize',resize);resize();
+function mkCanvas(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'));return c;}
+const snowPat=ctx.createPattern(mkCanvas(256,256,g=>{
+  g.fillStyle='#dfe8f0';g.fillRect(0,0,256,256);
+  const r=mulberry(9);
+  for(let i=0;i<14;i++){const x0=r()*256,y0=r()*256,rr=30+r()*60;for(const ox of [-256,0,256])for(const oy of [-256,0,256]){const x=x0+ox,y=y0+oy;const gr=g.createRadialGradient(x,y,0,x,y,rr);gr.addColorStop(0,'rgba(255,255,255,.55)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(x-rr,y-rr,rr*2,rr*2);}}
+  for(let i=0;i<1100;i++){g.fillStyle=['#c9d6e2','#f4f8fb','#cdd9e4','#b9c9d8'][Math.floor(r()*4)];g.fillRect(r()*256,r()*256,1+r()*1.5,1+r()*1.5);}
+}),'repeat');
+const terrPat=ctx.createPattern(mkCanvas(128,128,g=>{
+  g.fillStyle='#d3c8b7';g.fillRect(0,0,128,128);const r=mulberry(4);
+  for(let i=0;i<500;i++){g.fillStyle=['#c4b7a3','#e6ded2','#bba98f','#efe9df'][Math.floor(r()*4)];g.fillRect(r()*128,r()*128,1+r()*2,1+r()*2);}
+  g.strokeStyle='rgba(150,130,105,.25)';for(let i=0;i<10;i++){g.beginPath();const x=r()*128,y=r()*128;g.ellipse(x,y,3,5,r()*3,0,TAU);g.stroke();}
+}),'repeat');
+// pre-rendered conifer sprites
+const treeSprites=[0,1,2].map(v=>mkCanvas(80,110,g=>{
+  const cx=40,base=100;
+  g.fillStyle='#5a3d27';g.fillRect(cx-4,base-16,8,16);
+  const tiers=[[34,40,'#1f4a3d'],[28,34,'#245446'],[20,28,'#2a5e4e']];
+  tiers.forEach(([w,h,c],i)=>{const y=base-14-i*22;g.fillStyle=c;g.beginPath();g.moveTo(cx-w,y);g.lineTo(cx+w,y);g.lineTo(cx+(v-1)*2,y-h-8);g.closePath();g.fill();
+    g.fillStyle='#f4f8fb';g.beginPath();g.moveTo(cx-w*0.55,y-h*0.42);g.quadraticCurveTo(cx,y-h*0.28,cx+w*0.6,y-h*0.45);g.lineTo(cx+(v-1)*2,y-h-8);g.closePath();g.fill();});
+}));
+
+function worldToScreen(x,y){return {x:(x-G.cam.x)*G.cam.zoom+VW/2,y:(y-G.cam.y)*G.cam.zoom+VH/2};}
+function screenToWorld(x,y){return {x:(x-VW/2)/G.cam.zoom+G.cam.x,y:(y-VH/2)/G.cam.zoom+G.cam.y};}
+
+const flakes=Array.from({length:240},()=>({x:Math.random(),y:Math.random(),z:Math.random(),s:Math.random()}));
+
+function render(dt){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle='#0b1520';ctx.fillRect(0,0,cv.width,cv.height);
+  if(!G){renderTitleBg(dt);return;}
+  const cam=G.cam,p=G.player;
+  cam.x=lerp(cam.x,p.x,Math.min(1,dt*6));cam.y=lerp(cam.y,p.y-10,Math.min(1,dt*6));
+  cam.shake=Math.max(0,cam.shake-dt*25);
+  const sx=(Math.random()-.5)*cam.shake,sy=(Math.random()-.5)*cam.shake;
+  const z=cam.zoom;
+  ctx.setTransform(DPR*z,0,0,DPR*z,DPR*(VW/2-cam.x*z+sx),DPR*(VH/2-cam.y*z+sy));
+  const vx0=cam.x-VW/2/z-80,vy0=cam.y-VH/2/z-80,vx1=cam.x+VW/2/z+80,vy1=cam.y+VH/2/z+140;
+  // ground
+  ctx.fillStyle='#0e1a26';ctx.fillRect(vx0,vy0,vx1-vx0,vy1-vy0);
+  ctx.fillStyle=snowPat;ctx.fillRect(Math.max(0,vx0),Math.max(0,vy0),Math.min(G.W,vx1)-Math.max(0,vx0),Math.min(G.H,vy1)-Math.max(0,vy0));
+  // owned territory
+  const c0x=Math.max(0,cellOf(vx0)),c0y=Math.max(0,cellOf(vy0)),c1x=Math.min(G.cols-1,cellOf(vx1)),c1y=Math.min(G.rows-1,cellOf(vy1));
+  ctx.fillStyle=terrPat;
+  for(let cy=c0y;cy<=c1y;cy++)for(let cx=c0x;cx<=c1x;cx++)if(G.owned[cellIdx(cx,cy)])ctx.fillRect(cx*CELL,cy*CELL,CELL+0.5,CELL+0.5);
+  // warm ground glow
+  const cf=G.campfire;const fl=1+Math.sin(G.time*9)*.03+Math.sin(G.time*23)*.02;
+  let gr=ctx.createRadialGradient(cf.x,cf.y,10,cf.x,cf.y,240*fl);gr.addColorStop(0,'rgba(255,150,70,.32)');gr.addColorStop(1,'rgba(255,150,70,0)');
+  ctx.fillStyle=gr;ctx.fillRect(cf.x-250,cf.y-250,500,500);
+  // expansion flashes
+  for(const f of G.flashes){const t=f.t/0.8;ctx.strokeStyle='rgba(255,220,140,'+(1-t)+')';ctx.lineWidth=4*(1-t)+1;ctx.strokeRect(f.x-CELL/2-t*14,f.y-CELL/2-t*14,CELL+t*28,CELL+t*28);
+    ctx.fillStyle='rgba(255,240,200,'+(0.35*(1-t))+')';ctx.fillRect(f.x-CELL/2,f.y-CELL/2,CELL,CELL);}
+  // mode overlays
+  drawModeOverlay();
+  // sites
+  for(const s of G.sites.values()){
+    ctx.save();ctx.setLineDash([6,5]);ctx.strokeStyle='rgba(243,201,76,.95)';ctx.lineWidth=2;ctx.strokeRect(s.x-CELL/2+3,s.y-CELL/2+3,CELL-6,CELL-6);ctx.restore();
+    ctx.fillStyle='rgba(243,201,76,.16)';ctx.fillRect(s.x-CELL/2+3,s.y-CELL/2+3,CELL-6,CELL-6);
+    // stakes
+    ctx.fillStyle='#8a5a33';for(const [a,b] of [[-22,-22],[22,-22],[-22,22],[22,22]])ctx.fillRect(s.x+a-2,s.y+b-12,4,12);
+    drawBar(s.x,s.y+4,40,s.work/s.need,'#f3c94c');
+  }
+  // drops
+  for(const d of G.drops){const bob=Math.sin(G.time*4+d.bob)*2;
+    ctx.fillStyle='rgba(30,50,70,.18)';ctx.beginPath();ctx.ellipse(d.x,d.y+2,7,3,0,0,TAU);ctx.fill();
+    if(d.type==='wood'){ctx.fillStyle='#9a6b3f';ctx.fillRect(d.x-8,d.y-6+bob,16,6);ctx.fillStyle='#d9b07a';ctx.beginPath();ctx.arc(d.x+8,d.y-3+bob,3,0,TAU);ctx.fill();}
+    else{ctx.fillStyle='#d4554a';ctx.beginPath();ctx.ellipse(d.x,d.y-4+bob,7,5,.3,0,TAU);ctx.fill();ctx.fillStyle='#f4e6d8';ctx.fillRect(d.x+4,d.y-6+bob,5,2);}}
+  // y-sorted world objects
+  const list=[];
+  const vis=o=>o.x>vx0-60&&o.x<vx1+60&&o.y>vy0-40&&o.y<vy1+40;
+  for(const t of G.trees)if(vis(t))list.push([t.y,drawTree,t]);
+  for(const r of G.rocks)if(vis(r))list.push([r.y,drawRock,r]);
+  for(const b of G.buildings)if(vis(b))list.push([b.y+(b.type==='campfire'?0:18),drawBuilding,b]);
+  for(const s of G.structs)if(vis(s))list.push([s.y+20,drawStruct,s]);
+  for(const f of G.fences.values())if(vis(f))list.push([f.x1===f.x2?Math.max(f.y1,f.y2)-4:f.y,drawFence,f]);
+  for(const f of G.falling)if(vis(f))list.push([f.x1===f.x2?Math.max(f.y1,f.y2)-4:f.y,drawFence,f]);
+  for(const u of G.residents)if(vis(u))list.push([u.y,drawResident,u]);
+  for(const m of G.mobs)if(vis(m))list.push([m.y,drawMob,m]);
+  list.push([p.y,drawPlayer,p]);
+  list.sort((a,b)=>a[0]-b[0]);
+  for(const [,fn,o] of list)fn(o);
+  // projectiles
+  ctx.lineCap='round';
+  for(const pr of G.proj){const a=Math.atan2(pr.vy,pr.vx);ctx.strokeStyle='#5a3d27';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pr.x-Math.cos(a)*14,pr.y-Math.sin(a)*14);ctx.lineTo(pr.x,pr.y);ctx.stroke();
+    ctx.fillStyle='#dfe6ec';ctx.beginPath();ctx.arc(pr.x,pr.y,2,0,TAU);ctx.fill();}
+  // particles
+  for(const q of G.parts){const a=1-q.life/q.max;ctx.globalAlpha=a;ctx.fillStyle=q.c;ctx.fillRect(q.x-q.s/2,q.y-q.s/2,q.s,q.s);}ctx.globalAlpha=1;
+  // health bars
+  const hb=o=>{if(o.hp<o.maxHp&&!o.dead&&vis(o))drawBar(o.x,o.y-(o.barY||(o.r*2+20)),o.kind==='struct'?70:34,o.hp/o.maxHp,o.kind==='res'||o.kind==='building'?'#86d68f':'#ff6f5e');};
+  G.residents.forEach(hb);G.mobs.forEach(m=>{if(m.kind!=='chief')hb(m);});G.buildings.forEach(b=>{b.barY=b.type==='campfire'?44:70;hb(b);});G.structs.forEach(s=>{s.barY=s.r+40;hb(s);});
+  for(const f of G.fences.values())if(f.hp<f.maxHp&&f.hp>0&&vis(f))drawBar(f.x,f.y-30,26,f.hp/f.maxHp,'#f3c94c');
+  // ranges when building towers
+  if(G.mode&&G.mode.build&&(G.mode.build==='tower'||G.mode.build==='bigtower')&&G.hover){const c=cellCenter(G.hover.cx,G.hover.cy);ctx.strokeStyle='rgba(143,208,245,.5)';ctx.setLineDash([4,6]);ctx.beginPath();ctx.arc(c.x,c.y,BAL.bld[G.mode.build].range,0,TAU);ctx.stroke();ctx.setLineDash([]);}
+  // floating texts
+  ctx.font='700 13px "Zen Kaku Gothic New",sans-serif';ctx.textAlign='center';
+  for(const t of G.texts){ctx.globalAlpha=1-Math.max(0,t.t-0.6)/0.5;ctx.fillStyle='rgba(10,20,30,.6)';ctx.fillText(t.s,t.x+1,t.y-t.t*30+1);ctx.fillStyle=t.c;ctx.fillText(t.s,t.x,t.y-t.t*30);}ctx.globalAlpha=1;
+  // inspect ring
+  if(G.inspect&&!G.inspect.dead){const o=G.inspect;ctx.strokeStyle='rgba(143,208,245,.9)';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.ellipse(o.x,o.y+2,(o.r||20)+8,((o.r||20)+8)*0.5,0,0,TAU);ctx.stroke();ctx.setLineDash([]);}
+  if(TOUCH&&G.aimT&&!G.aimT.dead){const o=G.aimT;const rr=(o.r||14)+6;ctx.strokeStyle='rgba(242,145,63,.85)';ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<4;i++){const a=i*Math.PI/2+G.time*1.5;ctx.moveTo(o.x+Math.cos(a)*rr,o.y-8+Math.sin(a)*rr*0.6);ctx.lineTo(o.x+Math.cos(a)*(rr+7),o.y-8+Math.sin(a)*(rr+7)*0.6);}ctx.stroke();}
+  // lighting
+  ctx.setTransform(1,0,0,1,0,0);
+  const dark=G.sd.dark+G.weather.bl*0.06;
+  lctx.globalCompositeOperation='source-over';lctx.clearRect(0,0,lc.width,lc.height);
+  lctx.fillStyle='rgba(8,18,40,'+dark+')';lctx.fillRect(0,0,lc.width,lc.height);
+  lctx.globalCompositeOperation='destination-out';
+  const hole=(x,y,r,a)=>{const s=worldToScreen(x,y);const X=s.x/2,Y=s.y/2,R=r*z/2;const g=lctx.createRadialGradient(X,Y,0,X,Y,R);g.addColorStop(0,'rgba(0,0,0,'+a+')');g.addColorStop(1,'rgba(0,0,0,0)');lctx.fillStyle=g;lctx.fillRect(X-R,Y-R,R*2,R*2);};
+  hole(cf.x,cf.y,330*fl,1);
+  for(const b of G.buildings)if(b.built&&(b.type==='tower'||b.type==='bigtower'))hole(b.x,b.y-30,150,.7);
+  hole(p.x,p.y,170,.55);
+  ctx.drawImage(lc,0,0,cv.width,cv.height);
+  // warm additive glow
+  const s=worldToScreen(cf.x,cf.y-14);ctx.globalCompositeOperation='lighter';
+  gr=ctx.createRadialGradient(s.x*DPR,s.y*DPR,0,s.x*DPR,s.y*DPR,110*z*DPR*fl);gr.addColorStop(0,'rgba(255,140,50,.35)');gr.addColorStop(1,'rgba(255,140,50,0)');
+  ctx.fillStyle=gr;ctx.fillRect(s.x*DPR-130*DPR,s.y*DPR-130*DPR,260*DPR,260*DPR);ctx.globalCompositeOperation='source-over';
+  // snowfall (screen space)
+  drawSnow(dt,G.weather);
+  // blizzard haze
+  if(G.weather.bl>0.05){ctx.fillStyle='rgba(225,235,245,'+(G.weather.bl*0.18)+')';ctx.fillRect(0,0,cv.width,cv.height);}
+  // off-screen raid indicators
+  drawIndicators();
+}
+function drawSnow(dt,w){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  const n=Math.floor(110+w.bl*130);
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  for(let i=0;i<n;i++){const f=flakes[i];
+    f.y+=dt*(0.05+f.z*0.12)*(1+w.bl);f.x+=dt*(w.wind/VW)*(0.4+f.z);f.x+=Math.sin(G?G.time*1.5+f.s*10:f.s)*0.0004;
+    if(f.y>1)f.y-=1;if(f.x>1)f.x-=1;if(f.x<0)f.x+=1;
+    const r=0.8+f.z*2.2;ctx.globalAlpha=.4+f.z*.5;ctx.beginPath();ctx.arc(f.x*VW,f.y*VH,r,0,TAU);ctx.fill();}
+  ctx.globalAlpha=1;
+}
+function drawIndicators(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  const groups=[];
+  for(const r of G.raid.active){const al=r.members.filter(m=>!m.dead);if(!al.length)continue;let x=0,y=0;al.forEach(m=>{x+=m.x;y+=m.y;});groups.push({x:x/al.length,y:y/al.length,c:'#ff6f5e',n:al.length});}
+  if(G.raid.warn){const w=G.raid.warn;w.angs.forEach((a,i)=>{const sp=w.from&&w.from[i]?w.from[i]:raidSpawnPoint(a);groups.push({x:sp.x,y:sp.y,c:'#ffd25e',n:w.sizes[i],t:Math.ceil(w.t)});});}
+  if(!ownedAt(G.player.x,G.player.y))groups.push({x:G.campfire.x,y:G.campfire.y,c:'#f2913f',home:true});
+  for(const g of groups){
+    const s=worldToScreen(g.x,g.y);if(s.x>30&&s.y>30&&s.x<VW-30&&s.y<VH-30)continue;
+    const cx=VW/2,cy=VH/2,a=Math.atan2(s.y-cy,s.x-cx);
+    const mx=VW/2-70,my=VH/2-80;const k=Math.min(mx/Math.abs(Math.cos(a)||1e-6),my/Math.abs(Math.sin(a)||1e-6));
+    const x=cx+Math.cos(a)*k,y=cy+Math.sin(a)*k;
+    ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.fillStyle=g.c;ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-8,-10);ctx.lineTo(-4,0);ctx.lineTo(-8,10);ctx.closePath();ctx.fill();ctx.restore();
+    ctx.font='700 12px "Zen Kaku Gothic New",sans-serif';ctx.textAlign='center';ctx.fillStyle=g.c;
+    ctx.fillText(g.home?'拠点':g.t?('敵'+g.n+' '+g.t+'s'):('敵'+g.n),x-Math.cos(a)*24,y-Math.sin(a)*24+4);
+  }
+}
+function drawBar(x,y,w,f,c){ctx.fillStyle='rgba(10,20,30,.7)';ctx.fillRect(x-w/2-1,y-1,w+2,6);ctx.fillStyle=c;ctx.fillRect(x-w/2,y,w*clamp(f,0,1),4);}
+function shadow(x,y,rx,ry){ctx.fillStyle='rgba(40,60,85,.22)';ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,TAU);ctx.fill();}
+function drawTree(t){
+  if(t.wood<=0){if(t.cleared)return;shadow(t.x,t.y,10,4);ctx.fillStyle='#6b4a30';ctx.beginPath();ctx.ellipse(t.x,t.y-3,8,5,0,0,TAU);ctx.fill();ctx.fillStyle='#c9a274';ctx.beginPath();ctx.ellipse(t.x,t.y-5,6,3.5,0,0,TAU);ctx.fill();return;}
+  const s=t.s*(t.grow!==undefined?Math.min(1,t.grow):1);const sh=t.shake>0?Math.sin(t.shake*60)*t.shake*12:0;
+  shadow(t.x+6,t.y,22*s,7*s);
+  ctx.drawImage(treeSprites[t.v],t.x-40*s+sh,t.y-100*s,80*s,110*s);
+}
+function drawRock(r){shadow(r.x+3,r.y+2,r.r*1.1,r.r*0.45);ctx.fillStyle='#7d8892';ctx.beginPath();ctx.ellipse(r.x,r.y-r.r*0.35,r.r,r.r*0.7,0,0,TAU);ctx.fill();
+  ctx.fillStyle='#9aa5ae';ctx.beginPath();ctx.ellipse(r.x-r.r*.2,r.y-r.r*.55,r.r*.6,r.r*.38,0,0,TAU);ctx.fill();
+  ctx.fillStyle='#f4f8fb';ctx.beginPath();ctx.ellipse(r.x-r.r*.1,r.y-r.r*.85,r.r*.7,r.r*.28,0,0,TAU);ctx.fill();}
+function drawFence(f){
+  const fall=f.fall!==undefined?f.fall:0;const t=f.anim===undefined?1:clamp(f.anim,0,1);
+  if(f.fall===undefined&&f.delay>0&&t===0)return;
+  const rise=fall?1-fall:easeOutBack(t);if(rise<=0.02)return;
+  const tier=f.tier,broken=f.hp<=0&&fall===0;
+  const H=(tier===3?26:tier===2?22:18)*rise;
+  const ox=fall*f.nx*14,oy=fall*f.ny*14;
+  ctx.globalAlpha=fall?1-fall:1;
+  const len=dist(f.x1,f.y1,f.x2,f.y2);const n=Math.max(2,Math.round(len/(tier===3?10:14)));
+  const vertical=f.x1===f.x2;
+  const post=tier===3?'#7c858e':tier===2?'#6b4528':'#9a6b3f',postTop=tier===3?'#c3cad0':tier===2?'#8c5f3a':'#c8955b',rail=tier===2?'#4f5961':'#7e5531';
+  if(broken){
+    ctx.fillStyle=post;for(let i=0;i<=n;i+=2){const k=i/n;const x=lerp(f.x1,f.x2,k),y=lerp(f.y1,f.y2,k);ctx.save();ctx.translate(x,y);ctx.rotate((i%3-1)*.6);ctx.fillRect(-6,-3,12,4);ctx.restore();}
+    ctx.globalAlpha=1;return;
+  }
+  const hit=f.hitFlash>0;
+  if(tier===3){
+    // stone footing + log wall
+    ctx.fillStyle='#6f777f';
+    if(vertical)ctx.fillRect(f.x1-6+ox,f.y1+oy,12,len);else ctx.fillRect(f.x1+ox,f.y1-5+oy,len,9);
+  }
+  // rails
+  ctx.strokeStyle=hit?'#ffffff':rail;ctx.lineWidth=tier===1?2.5:3.5;
+  for(const k of tier===1?[0.4,0.8]:[0.3,0.62,0.9]){ctx.beginPath();ctx.moveTo(f.x1+ox,f.y1+oy-H*k);ctx.lineTo(f.x2+ox,f.y2+oy-H*k);ctx.stroke();}
+  // posts
+  for(let i=0;i<=n;i++){const k=i/n;const x=lerp(f.x1,f.x2,k)+ox,y=lerp(f.y1,f.y2,k)+oy;
+    const w=tier===3?7:tier===2?5:4;ctx.fillStyle=hit?'#ffffff':post;ctx.fillRect(x-w/2,y-H,w,H);
+    ctx.fillStyle=postTop;ctx.beginPath();ctx.moveTo(x-w/2,y-H);ctx.lineTo(x,y-H-(tier===1?4:5)*rise);ctx.lineTo(x+w/2,y-H);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(x-w/2,y-H-1,w,1.5);}
+  if(f.hp<f.maxHp*0.5){ctx.strokeStyle='rgba(30,15,5,.6)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(f.x-6,f.y-H*.8);ctx.lineTo(f.x+2,f.y-H*.4);ctx.lineTo(f.x-3,f.y-H*.1);ctx.stroke();}
+  ctx.globalAlpha=1;
+}
+function flicker(o){return Math.sin(G.time*14+o)*0.5+Math.sin(G.time*31+o*2)*0.3;}
+function drawBuilding(b){
+  const x=b.x,y=b.y,hit=b.hitFlash>0;
+  if(b.type==='campfire'){
+    shadow(x,y+6,28,10);
+    for(let i=0;i<9;i++){const a=i/9*TAU;ctx.fillStyle=i%2?'#7d8892':'#9aa5ae';ctx.beginPath();ctx.ellipse(x+Math.cos(a)*20,y+Math.sin(a)*11,6,4.5,0,0,TAU);ctx.fill();}
+    ctx.strokeStyle='#5a3d27';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x-12,y+4);ctx.lineTo(x+12,y-6);ctx.moveTo(x+12,y+4);ctx.lineTo(x-12,y-6);ctx.stroke();
+    const f1=flicker(1),f2=flicker(2);const s=b.hp/b.maxHp;
+    ctx.fillStyle='#ff6a2a';ctx.beginPath();ctx.moveTo(x-12,y);ctx.quadraticCurveTo(x-10+f1*3,y-22,x+f2*3,y-36-f1*5);ctx.quadraticCurveTo(x+10+f2*3,y-20,x+12,y);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#ffb347';ctx.beginPath();ctx.moveTo(x-7,y);ctx.quadraticCurveTo(x-6+f2*2,y-14,x+f1*2,y-25-f2*4);ctx.quadraticCurveTo(x+6,y-12,x+7,y);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#fff3c4';ctx.beginPath();ctx.ellipse(x,y-6,3.5,6,0,0,TAU);ctx.fill();
+    if(hit){ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(x,y-10,24,0,TAU);ctx.fill();}
+    if(G.res.raw>0&&G.cookP>0){drawBar(x,y+18,30,G.cookP,'#ffb36b');}
+    return;
+  }
+  const rise=b.built?easeOutBack(clamp(b.rise,0,1)):1;
+  ctx.save();ctx.translate(x,y+18);ctx.scale(1,rise);ctx.translate(-x,-(y+18));
+  if(!b.built){
+    // scaffold
+    shadow(x,y+18,30,9);
+    ctx.globalAlpha=.35;drawBuildingBody(b,x,y,false);ctx.globalAlpha=1;
+    ctx.strokeStyle='#8a5a33';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(x-24,y+18);ctx.lineTo(x-24,y-24);ctx.moveTo(x+24,y+18);ctx.lineTo(x+24,y-24);ctx.moveTo(x-28,y-10);ctx.lineTo(x+28,y-10);ctx.moveTo(x-24,y+18);ctx.lineTo(x+24,y-10);ctx.stroke();
+    ctx.restore();drawBar(x,y+26,44,b.work/b.need,'#f3c94c');return;
+  }
+  shadow(x+4,y+18,32,10);
+  drawBuildingBody(b,x,y,hit);
+  ctx.restore();
+}
+function drawBuildingBody(b,x,y,hit){
+  const W=hit?'#ffffff':null;
+  switch(b.type){
+    case 'house':
+      ctx.fillStyle=W||'#7a5233';ctx.fillRect(x-24,y-14,48,32);
+      ctx.strokeStyle='#5c3b22';ctx.lineWidth=1.5;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(x-24,y-8+i*8);ctx.lineTo(x+24,y-8+i*8);ctx.stroke();}
+      ctx.fillStyle='#3b2a1e';ctx.fillRect(x-6,y+2,12,16);
+      ctx.fillStyle='#ffcf7a';ctx.fillRect(x+10,y-4,8,7);
+      ctx.fillStyle=W||'#5a3d27';ctx.beginPath();ctx.moveTo(x-30,y-12);ctx.lineTo(x,y-36);ctx.lineTo(x+30,y-12);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#f4f8fb';ctx.beginPath();ctx.moveTo(x-30,y-13);ctx.lineTo(x,y-37);ctx.lineTo(x+30,y-13);ctx.lineTo(x+22,y-17);ctx.lineTo(x,y-30);ctx.lineTo(x-22,y-17);ctx.closePath();ctx.fill();
+      break;
+    case 'storage':
+      ctx.fillStyle=W||'#6e4a2c';ctx.fillRect(x-28,y-10,56,28);
+      ctx.fillStyle='#4c3220';ctx.fillRect(x-28,y-16,56,8);
+      ctx.fillStyle='#f4f8fb';ctx.fillRect(x-30,y-19,60,5);
+      ctx.fillStyle='#b58a5a';ctx.fillRect(x-22,y+2,12,12);ctx.fillRect(x-8,y+4,12,10);ctx.fillStyle='#9a6b3f';ctx.fillRect(x+8,y,14,14);
+      ctx.strokeStyle='#5c3b22';ctx.strokeRect(x-22,y+2,12,12);ctx.strokeRect(x+8,y,14,14);
+      break;
+    case 'workshop':
+      ctx.fillStyle=W||'#6b5a49';ctx.fillRect(x-26,y-12,52,30);
+      ctx.fillStyle=W||'#4a3a2c';ctx.beginPath();ctx.moveTo(x-30,y-10);ctx.lineTo(x-30,y-22);ctx.lineTo(x+30,y-28);ctx.lineTo(x+30,y-10);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#f4f8fb';ctx.beginPath();ctx.moveTo(x-30,y-22);ctx.lineTo(x+30,y-28);ctx.lineTo(x+30,y-24);ctx.lineTo(x-30,y-18);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#3b4249';ctx.fillRect(x-10,y+4,20,6);ctx.fillRect(x-4,y+10,8,8);ctx.fillRect(x-14,y+2,6,4);
+      ctx.fillStyle='#ffb347';ctx.fillRect(x+14,y,6,6);
+      break;
+    case 'tower':case 'bigtower':{
+      const big=b.type==='bigtower';const h=big?68:54,w=big?20:15;
+      ctx.strokeStyle=W||'#6b4528';ctx.lineWidth=big?5:4;
+      ctx.beginPath();ctx.moveTo(x-w,y+18);ctx.lineTo(x-w+4,y-h+8);ctx.moveTo(x+w,y+18);ctx.lineTo(x+w-4,y-h+8);ctx.stroke();
+      ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-w,y+12);ctx.lineTo(x+w-4,y-h/2);ctx.moveTo(x+w,y+12);ctx.lineTo(x-w+4,y-h/2);ctx.stroke();
+      ctx.fillStyle=W||(big?'#5d6870':'#7a5233');ctx.fillRect(x-w-6,y-h,w*2+12,14);
+      ctx.fillStyle='#f4f8fb';ctx.fillRect(x-w-7,y-h-3,w*2+14,4);
+      ctx.fillStyle='#2f3a45';ctx.beginPath();ctx.arc(x,y-h-8,6,0,TAU);ctx.fill();
+      ctx.fillStyle='#ffb347';ctx.beginPath();ctx.arc(x+w+2,y-h-2,2.5+flicker(b.x)*0.8,0,TAU);ctx.fill();
+      break;}
+  }
+}
+function drawStruct(s){
+  const x=s.x,y=s.y;
+  if(s.dead){ctx.fillStyle='#4a3a2c';for(let i=0;i<8;i++){const a=i/8*TAU;ctx.fillRect(x+Math.cos(a)*s.r*.6-6,y+Math.sin(a)*s.r*.4-2,12,4);}ctx.fillStyle='rgba(40,40,40,.4)';ctx.beginPath();ctx.ellipse(x,y,s.r*.6,s.r*.3,0,0,TAU);ctx.fill();return;}
+  const hit=s.hitFlash>0;
+  shadow(x,y+10,s.r*1.1,s.r*.45);
+  // palisade ring
+  const n=s.type==='base'?22:14;
+  for(let i=0;i<n;i++){const a=i/n*TAU;if(Math.abs(angDiff(a,Math.PI/2))<0.35)continue;const px=x+Math.cos(a)*s.r,py=y+Math.sin(a)*s.r*.55;ctx.fillStyle=hit?'#fff':'#5c3220';ctx.fillRect(px-3,py-26,6,26);ctx.fillStyle='#e9ddd0';ctx.beginPath();ctx.moveTo(px-3,py-26);ctx.lineTo(px,py-32);ctx.lineTo(px+3,py-26);ctx.fill();}
+  // tent
+  ctx.fillStyle=hit?'#fff':'#8e3b2a';ctx.beginPath();ctx.moveTo(x-s.r*.55,y+6);ctx.lineTo(x,y-s.r*.9);ctx.lineTo(x+s.r*.55,y+6);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#5a221a';ctx.beginPath();ctx.moveTo(x-6,y+6);ctx.lineTo(x,y-12);ctx.lineTo(x+6,y+6);ctx.fill();
+  ctx.fillStyle='#f4f8fb';ctx.beginPath();ctx.moveTo(x-s.r*.25,y-s.r*.5);ctx.lineTo(x,y-s.r*.9);ctx.lineTo(x+s.r*.25,y-s.r*.5);ctx.fill();
+  // totem
+  const tx=x+s.r*.6,ty=y-4;ctx.fillStyle='#6b3d22';ctx.fillRect(tx-5,ty-40,10,40);ctx.fillStyle='#d24f3a';ctx.fillRect(tx-7,ty-40,14,8);ctx.fillStyle='#f2d36b';ctx.fillRect(tx-3,ty-30,6,4);
+  ctx.font='700 12px "Zen Kaku Gothic New",sans-serif';ctx.textAlign='center';ctx.fillStyle='#ffd6cf';ctx.fillText(s.name,x,y+s.r*.55+20);
+}
+function drawHuman(o,body,trim,hood,extra){
+  const x=o.x,y=o.y,step=o.moving?Math.sin(o.walk)*2.5:0,hit=o.hitFlash>0;
+  shadow(x,y+1,o.r*0.95,o.r*0.4);
+  ctx.fillStyle='#2b3440';ctx.fillRect(x-5,y-8,3.5,8+step*.4);ctx.fillRect(x+1.5,y-8,3.5,8-step*.4);
+  ctx.fillStyle=hit?'#fff':body;ctx.beginPath();ctx.ellipse(x,y-14,o.r*0.85,o.r*0.95,0,0,TAU);ctx.fill();
+  ctx.fillStyle=trim;ctx.fillRect(x-o.r*0.8,y-12,o.r*1.6,3);
+  ctx.fillStyle=hit?'#fff':hood;ctx.beginPath();ctx.arc(x,y-26,o.r*0.62,0,TAU);ctx.fill();
+  ctx.fillStyle='#f0d2b6';ctx.beginPath();ctx.arc(x+Math.cos(o.face)*2,y-25+Math.max(0,Math.sin(o.face))*1.5,o.r*0.38,0,TAU);ctx.fill();
+  if(extra)extra(x,y);
+}
+function drawTool(o,len,color,swing,kind){
+  const a=o.face+(swing?(-1.2+ (1-swing)*2.2):0.6);
+  const hx=o.x+Math.cos(o.face)*6,hy=o.y-16;
+  ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(hx+Math.cos(a)*len,hy+Math.sin(a)*len);ctx.stroke();
+  const ex=hx+Math.cos(a)*len,ey=hy+Math.sin(a)*len;
+  if(kind==='axe'){ctx.fillStyle='#b9c3cc';ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex+Math.cos(a+1.6)*8,ey+Math.sin(a+1.6)*8);ctx.lineTo(ex+Math.cos(a+0.6)*9,ey+Math.sin(a+0.6)*9);ctx.closePath();ctx.fill();}
+  if(kind==='spear'){ctx.fillStyle='#d8dde2';ctx.beginPath();ctx.moveTo(ex+Math.cos(a)*8,ey+Math.sin(a)*8);ctx.lineTo(ex+Math.cos(a+1.4)*3,ey+Math.sin(a+1.4)*3);ctx.lineTo(ex+Math.cos(a-1.4)*3,ey+Math.sin(a-1.4)*3);ctx.closePath();ctx.fill();}
+  if(kind==='bow'){ctx.strokeStyle='#7a5233';ctx.lineWidth=2;ctx.beginPath();ctx.arc(o.x+Math.cos(o.face)*12,o.y-16+Math.sin(o.face)*12,10,o.face-1.2,o.face+1.2);ctx.stroke();}
+}
+function drawPlayer(p){
+  if(p.inv>0&&p.dodgeT<=0&&Math.floor(G.time*30)%2===0)ctx.globalAlpha=.55;
+  ctx.strokeStyle='rgba(242,145,63,.85)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(p.x,p.y+1,17,7,0,0,TAU);ctx.stroke();
+  drawHuman(p,'#36516b','#c8433a','#e9e1d4',(x,y)=>{ctx.fillStyle='#c8433a';ctx.fillRect(x-7,y-21,14,4);});
+  if(p.weapon==='axe')drawTool(p,22,'#6b4528',p.swing,'axe');else drawTool(p,4,'#6b4528',0,'bow');
+  if(p.swing>0.3){ctx.strokeStyle='rgba(255,255,255,'+(p.swing*0.6)+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y-14,BAL.player.axeReach*0.8,p.face-BAL.player.axeArc,p.face+BAL.player.axeArc);ctx.stroke();}
+  if(bagTotal()>0){ctx.fillStyle='#8a6a4a';ctx.fillRect(p.x-7,p.y-24,14,10);ctx.fillStyle='#c8955b';ctx.fillRect(p.x-5,p.y-27,10,4);}
+  ctx.globalAlpha=1;
+}
+function drawResident(u){
+  const rc=ROLE[u.role].color;
+  drawHuman(u,'#5b6a78',rc,'#d9dee3',(x,y)=>{
+    if(u.role==='builder'){ctx.fillStyle='#f3c94c';ctx.beginPath();ctx.arc(x,y-28,6.5,Math.PI,0);ctx.fill();}
+    if(u.role==='cook'){ctx.fillStyle='#ffffff';ctx.fillRect(x-4,y-36,8,6);}
+    if(u.role==='guard'){ctx.fillStyle='#8aa1b5';ctx.beginPath();ctx.arc(x,y-28,6.5,Math.PI,0);ctx.fill();}
+    if(u.role==='hunter'){ctx.fillStyle='#7a5233';ctx.beginPath();ctx.arc(x,y-28,6.5,Math.PI,0);ctx.fill();}
+  });
+  if(u.role==='lumber')drawTool(u,16,'#6b4528',u.swing||0,'axe');
+  else if(u.role==='builder')drawTool(u,13,'#6b4528',u.swing||0,'axe');
+  else if(u.role==='guard')drawTool(u,26,'#6b4528',u.swing||0,'spear');
+  else if(u.role==='hunter')drawTool(u,4,'#6b4528',0,'bow');
+  if(u.carry&&u.carry.n>0){ctx.fillStyle=u.carry.type==='wood'?'#9a6b3f':'#d4554a';ctx.fillRect(u.x-6,u.y-38,12,5);}
+  ctx.fillStyle=rc;ctx.beginPath();ctx.arc(u.x,u.y-44,3,0,TAU);ctx.fill();
+}
+function drawMob(m){
+  drawMobBody(m);
+  if(m.wind>0){ctx.fillStyle='#ff6f5e';ctx.font='700 16px "Dela Gothic One",sans-serif';ctx.textAlign='center';ctx.fillText('!',m.x,m.y-m.r*2-14);
+    ctx.strokeStyle='rgba(255,111,94,.75)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(m.x,m.y-10,m.def.reach*(1-m.wind/(m.def.wind||.3))+8,m.face-.8,m.face+.8);ctx.stroke();}
+}
+function drawMobBody(m){
+  const x=m.x,y=m.y,hit=m.hitFlash>0;
+  if(m.kind==='bear'||m.kind==='bigbear'){
+    const k=m.r/22,step=m.moving?Math.sin(m.walk*0.8)*2:0,dir=Math.cos(m.face)>=0?1:-1;
+    shadow(x,y+2,26*k,9*k);
+    ctx.fillStyle=hit?'#fff':(m.kind==='bigbear'?'#dde8f2':'#f1f4f6');
+    ctx.beginPath();ctx.ellipse(x,y-16*k,24*k,15*k,0,0,TAU);ctx.fill();
+    ctx.fillStyle=m.kind==='bigbear'?'#c7d4df':'#dfe5ea';
+    for(const lx of [-14,-5,6,15]){ctx.fillRect(x+lx*k-3*k,y-6*k+(lx%2?step:-step),7*k,8*k);}
+    ctx.fillStyle=hit?'#fff':(m.kind==='bigbear'?'#dde8f2':'#f1f4f6');ctx.beginPath();ctx.ellipse(x+dir*22*k,y-22*k,11*k,9*k,0,0,TAU);ctx.fill();
+    ctx.beginPath();ctx.arc(x+dir*16*k,y-30*k,3.5*k,0,TAU);ctx.fill();
+    ctx.fillStyle='#1d232a';ctx.beginPath();ctx.arc(x+dir*31*k,y-21*k,2.6*k,0,TAU);ctx.fill();ctx.fillRect(x+dir*24*k-1.2,y-25*k,2.4,2.4);
+    if(m.atk>0){ctx.strokeStyle='rgba(255,111,94,.8)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x+dir*30*k,y-18*k,10*k,-1,1);ctx.stroke();}
+    if(m.lv>1.25){ctx.fillStyle='#ff6f5e';ctx.font='700 10px "IBM Plex Mono",monospace';ctx.textAlign='center';ctx.fillText('危険',x,y-40*k);}
+    return;
+  }
+  if(m.kind==='deer'){
+    const dir=Math.cos(m.face)>=0?1:-1,step=m.moving?Math.sin(m.walk)*2:0;
+    shadow(x,y+1,14,5);ctx.fillStyle=hit?'#fff':'#8a6143';ctx.beginPath();ctx.ellipse(x,y-14,13,7,0,0,TAU);ctx.fill();
+    ctx.fillStyle='#6a4a33';ctx.fillRect(x-9,y-10,3,10+step);ctx.fillRect(x+6,y-10,3,10-step);
+    ctx.fillStyle=hit?'#fff':'#8a6143';ctx.beginPath();ctx.ellipse(x+dir*13,y-22,5,4,0,0,TAU);ctx.fill();
+    ctx.strokeStyle='#d8c3a5';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x+dir*12,y-25);ctx.lineTo(x+dir*8,y-34);ctx.lineTo(x+dir*4,y-36);ctx.moveTo(x+dir*9,y-31);ctx.lineTo(x+dir*13,y-35);ctx.stroke();
+    ctx.fillStyle='#f4ece2';ctx.fillRect(x-dir*14,y-17,3,3);
+    return;
+  }
+  if(m.kind==='chief'){
+    if(m.tele>0){ctx.strokeStyle='rgba(255,111,94,'+(0.4+Math.sin(G.time*40)*0.3)+')';ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(x,y-10);ctx.lineTo(x+m.chx*220,y-10+m.chy*220);ctx.stroke();}
+    const o={...m,r:22};
+    drawHuman(o,'#8e3b2a','#f2d36b','#5a221a',(xx,yy)=>{ctx.fillStyle='#e9ddd0';ctx.beginPath();ctx.moveTo(xx-12,yy-30);ctx.lineTo(xx-20,yy-46);ctx.lineTo(xx-7,yy-34);ctx.fill();ctx.beginPath();ctx.moveTo(xx+12,yy-30);ctx.lineTo(xx+20,yy-46);ctx.lineTo(xx+7,yy-34);ctx.fill();
+      ctx.fillStyle='#b8321f';ctx.beginPath();ctx.moveTo(xx-16,yy-22);ctx.lineTo(xx+16,yy-22);ctx.lineTo(xx+20,yy-2);ctx.lineTo(xx-20,yy-2);ctx.closePath();ctx.globalAlpha=.55;ctx.fill();ctx.globalAlpha=1;});
+    drawTool(o,34,'#5a3d27',m.atk>0?1-m.atk*4:0,'axe');
+    return;
+  }
+  const brute=m.kind==='brute';
+  drawHuman(m,brute?'#6b3a2a':'#8a4b33','#d2a35a','#c58a5b',(xx,yy)=>{
+    ctx.fillStyle='#e8d9c2';ctx.fillRect(xx-5,yy-29,10,7);ctx.fillStyle='#3b2a1e';ctx.fillRect(xx-3,yy-27,2,2);ctx.fillRect(xx+1,yy-27,2,2);
+    if(brute){ctx.fillStyle='#7a5233';ctx.beginPath();ctx.ellipse(xx-Math.cos(m.face)*8,yy-14,7,10,0,0,TAU);ctx.fill();ctx.strokeStyle='#4c3220';ctx.lineWidth=1.5;ctx.stroke();}
+  });
+  drawTool(m,brute?22:26,'#6b4528',m.atk>0?1-m.atk*4:0,brute?'axe':'spear');
+}
+function drawModeOverlay(){
+  if(!G.mode)return;
+  const h=G.hover;
+  if(G.mode==='expand'){
+    const cost=expandCost();
+    for(let cy=0;cy<G.rows;cy++)for(let cx=0;cx<G.cols;cx++){if(!canExpand(cx,cy))continue;
+      ctx.fillStyle='rgba(143,208,245,.12)';ctx.fillRect(cx*CELL+4,cy*CELL+4,CELL-8,CELL-8);
+      ctx.strokeStyle='rgba(143,208,245,.45)';ctx.lineWidth=1.5;ctx.strokeRect(cx*CELL+4,cy*CELL+4,CELL-8,CELL-8);}
+    if(h&&canExpand(h.cx,h.cy)){const ok=G.res.wood>=cost;ctx.fillStyle=ok?'rgba(134,214,143,.3)':'rgba(255,111,94,.3)';ctx.fillRect(h.cx*CELL+2,h.cy*CELL+2,CELL-4,CELL-4);
+      ctx.strokeStyle=ok?'#86d68f':'#ff6f5e';ctx.lineWidth=3;ctx.strokeRect(h.cx*CELL+2,h.cy*CELL+2,CELL-4,CELL-4);}
+  }else if(G.mode.build&&h){
+    const c=canPlace(G.mode.build,h.cx,h.cy);const cc=cellCenter(h.cx,h.cy);
+    ctx.fillStyle=c.ok?'rgba(134,214,143,.28)':'rgba(255,111,94,.28)';ctx.fillRect(h.cx*CELL+2,h.cy*CELL+2,CELL-4,CELL-4);
+    ctx.globalAlpha=.55;drawBuildingBody({type:G.mode.build,x:cc.x,y:cc.y,hitFlash:0},cc.x,cc.y,false);ctx.globalAlpha=1;
+  }
+}
+// title background: drifting snow over the night field
+let titleT=0;
+function renderTitleBg(dt){
+  titleT+=dt;ctx.setTransform(DPR,0,0,DPR,0,0);
+  const g=ctx.createLinearGradient(0,0,0,VH);g.addColorStop(0,'#0b1520');g.addColorStop(1,'#16283a');ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);
+  ctx.fillStyle='#d9e3ec';ctx.beginPath();ctx.moveTo(0,VH*.78);for(let x=0;x<=VW;x+=40)ctx.lineTo(x,VH*.78+Math.sin(x*.01)*14+Math.sin(x*.023)*8);ctx.lineTo(VW,VH);ctx.lineTo(0,VH);ctx.fill();
+  for(let i=0;i<14;i++){const x=(i*157)%VW,s=.6+((i*37)%10)/14;ctx.drawImage(treeSprites[i%3],x-40*s,VH*.78-95*s+Math.sin(x*.01)*14,80*s,110*s);}
+  const fx=VW*.5,fy=VH*.8;const gr=ctx.createRadialGradient(fx,fy,0,fx,fy,220);gr.addColorStop(0,'rgba(255,140,50,.4)');gr.addColorStop(1,'rgba(255,140,50,0)');ctx.fillStyle=gr;ctx.fillRect(fx-230,fy-230,460,460);
+  drawSnow(dt,{bl:0.3,wind:60});
+}
+
+// ---------------- HUD ----------------
+let lastHud=0,hudCache={};
+function setHTML(id,html){if(hudCache[id]!==html){hudCache[id]=html;$(id).innerHTML=html;}}
+function buildMenu(){
+  const m=$('menu');m.innerHTML='';
+  const add=(html,id,fn,title)=>{const b=document.createElement('button');b.className='mbtn';b.id=id;b.innerHTML=html;b.onclick=e=>{fn();b.blur();if(TOUCH&&G&&G.drawer&&(id==='btnExpand'||id.startsWith('btnB_')||id==='btnManage'))closeDrawer();};if(title)b.title=title;m.appendChild(b);return b;};
+  const h=t=>{const d=document.createElement('div');d.className='mh';d.textContent=t;m.appendChild(d);};
+  h('領地');
+  add('','btnExpand',()=>toggleMode('expand'));
+  add('','btnFence',upgradeFences);
+  h('建築');
+  ['house','workshop','storage','tower','bigtower'].forEach(t=>add('','btnB_'+t,()=>toggleMode({build:t})));
+  h('技術');
+  add('','btnTech',research);
+  h('住民');
+  add('<span>住民管理<kbd>Tab</kbd></span><span class="c"></span>','btnManage',openManage);
+}
+function toggleMode(m){
+  if(!G)return;G.touchSel=null;
+  if(m==='expand')G.mode=G.mode==='expand'?null:'expand';
+  else if(m&&m.build){if(G.mode&&G.mode.build===m.build)G.mode=null;else{if(G.tech<BAL.bld[m.build].tech){banner('技術Lv'+BAL.bld[m.build].tech+'が必要','bad');return;}G.mode=m;}}
+  else G.mode=null;
+  lastHud=0;
+}
+function updHud(){
+  if(!G)return;
+  const r=G.res;const w=(k,v,c)=>'<span class="chip"><span class="k">'+k+'</span><span class="v">'+v+'</span>'+(c!==undefined?'<span class="cap">/'+c+'</span>':'')+'</span>';
+  const need=Math.ceil(pop()/BAL.food.perPop);
+  const foodLeft=Math.ceil(BAL.food.interval-G.foodT);
+  const food=G.hunger>0?'<span class="chip" style="color:var(--bad)">空腹（効率半減）</span>':'<span class="chip"><span class="k">次の食事</span><span class="v">'+foodLeft+'s</span><span class="cap">焼肉'+need+'</span></span>';
+  let raid='';
+  if(G.raid.warn)raid='<span class="chip" style="color:var(--warn)">敵襲まで <span class="v">'+Math.ceil(G.raid.warn.t)+'s</span></span>';
+  else if(G.raid.active.length)raid='<span class="chip" style="color:var(--bad)">交戦中 残り<span class="v">'+G.raid.active.reduce((a,r)=>a+r.members.filter(m=>!m.dead).length,0)+'</span></span>';
+  else if(G.sd.raids&&!G.freeMode)raid='<span class="chip"><span class="k">次の襲撃</span><span class="v">'+Math.max(0,Math.ceil(G.raid.next-G.raid.t))+'s</span></span>';
+  setHTML('topPanel',w('木材',r.wood,cap('wood'))+w('生肉',r.raw,cap('raw'))+w('焼肉',r.cooked,cap('cooked'))+'<span class="sep"></span>'+w('技術P',r.tp)+w('技術Lv',G.tech)+w('住民',pop(),popCap())+'<span class="sep"></span>'+food+raid);
+  // objectives
+  let oh='';
+  G.sd.objectives.forEach((o,i)=>{const done=objOk(i),v=done?o.n:o.v();oh+='<li class="'+(done?'done':'')+'"><span class="box"></span><span>'+o.t+'</span><span class="pr">'+Math.min(v,o.n)+'/'+o.n+'</span>'+(o.note&&!done?'<span class="note">'+o.note+'</span>':'')+'</li>';});
+  setHTML('objs',oh);
+  // menu
+  const cost=expandCost();
+  setHTML('btnExpand','<span>領地を拡張<kbd>B</kbd></span><span class="c">木材 '+cost+'</span><span class="d">'+(TOUCH?'隣のマスをタップ→配置／「作業」で建設':'隣接マスをクリック／Eで建設')+'</span>');
+  $('btnExpand').classList.toggle('on',G.mode==='expand');
+  const nt=G.fenceTier+1;
+  if(nt<=3){const fc=upgradeFenceCost();setHTML('btnFence','<span>防壁を強化</span><span class="c">'+(G.tech>=nt?'木材 '+fc:'Lv'+nt)+'</span><span class="d">'+BAL.fence[G.fenceTier].name+' → '+BAL.fence[nt].name+'</span>');$('btnFence').disabled=G.tech<nt||r.wood<fc;}
+  else{setHTML('btnFence','<span>防壁を強化</span><span class="c">最大</span><span class="d">'+BAL.fence[3].name+'</span>');$('btnFence').disabled=true;}
+  for(const t of ['house','workshop','storage','tower','bigtower']){
+    const d=BAL.bld[t],lock=G.tech<d.tech,b=$('btnB_'+t);
+    setHTML('btnB_'+t,'<span>'+d.name+'</span><span class="c">'+(lock?'Lv'+d.tech:'木材 '+d.cost)+'</span><span class="d">'+d.desc+'</span>');
+    b.disabled=lock;b.classList.toggle('on',!!(G.mode&&G.mode.build===t));
+  }
+  if(G.tech<3){const t=BAL.tech[G.tech+1];const ws=builtN('workshop')>0;
+    setHTML('btnTech','<span>技術Lv'+(G.tech+1)+'を研究</span><span class="c">TP '+t.tp+'</span><span class="d">'+(ws?t.unlock:'作業場が必要｜'+t.unlock)+'</span>');
+    $('btnTech').disabled=!ws||r.tp<t.tp;}
+  else{setHTML('btnTech','<span>技術Lv3（最大）</span><span class="c"></span><span class="d">'+BAL.tech[3].name+'</span>');$('btnTech').disabled=true;}
+  const idle=roleN('idle');
+  setHTML('btnManage','<span>住民管理<kbd>Tab</kbd></span><span class="c">'+pop()+'/'+popCap()+'</span><span class="d">'+ROLES.filter(x=>roleN(x.id)).map(x=>x.name+roleN(x.id)).join('・')+(idle?'':'')+'</span>');
+  // bottom
+  const p=G.player;$('hpBar').style.width=(p.hp/p.maxHp*100)+'%';setHTML('hpTxt',Math.max(0,Math.ceil(p.hp))+'/'+p.maxHp);
+  setHTML('weapon',p.weapon==='axe'?(G.tech>=3?'鉄の斧':'石斧')+' <kbd>1</kbd>':(G.tech>=3?'強化弓':'弓')+' <kbd>2</kbd>');
+  setHTML('bag',p.bag.wood+p.bag.raw+'/'+BAL.player.bag+(p.bag.wood||p.bag.raw?'（木'+p.bag.wood+' 肉'+p.bag.raw+'）':''));
+  setHTML('ctxhint',TOUCH?(G.mode?'':G.ctxAct?G.ctxAct.label.replace('E: ','作業ボタン: '):''):G.mode==='expand'?'拡張先をクリック（右クリックで終了）':G.mode&&G.mode.build?'建てる場所をクリック（右クリックで取消）':G.ctxAct?G.ctxAct.label:'');
+  if(TOUCH)updTouchHud();
+  // hint
+  const hint=currentHint();$('hint').hidden=!hint;if(hint)setHTML('hintTxt','<b>'+(G.sd.tutorial?'ガイド':'ヒント')+'</b>'+hint);
+  // boss
+  const ch=G.mobs.find(m=>m.kind==='chief'&&!m.dead);
+  const showBoss=ch&&(G.raid.chiefSent||dist(p.x,p.y,ch.x,ch.y)<720);
+  $('boss').hidden=!showBoss;if(showBoss)$('bossBar').style.width=(ch.hp/ch.maxHp*100)+'%';
+  // info
+  updInfo();
+  if(G.panel)updManage();
+}
+function currentHint(){
+  if(G.freeMode)return '';
+  if(G.sd.tutorial){
+    const T=TOUCH?[
+      [()=>G.stats.leftHome,'画面の左半分をドラッグして移動。柵の外へ出て、針葉樹に近づこう（柵は味方なら通り抜けられる）'],
+      [()=>G.stats.wood>=5||G.player.bag.wood>=5,'木のそばで「攻撃」を押すと伐採できる（近くの木や敵へ自動で向く）。木材は背負い袋に入る'],
+      [()=>G.stats.wood>=5,'領地に戻ると、背負い袋の資源が自動で倉庫に入る'],
+      [()=>G.stats.expands>=1,'上の「拡張」→ 領地の隣のマスをタップ →「ここに配置」。現場で「作業」を長押しすると早く建つ'],
+      [()=>G.stats.bears>=1,'ホッキョクグマを倒すと生肉が手に入る。頭上に「!」が出たら「回避」'],
+      [()=>G.stats.cooked>=1,'生肉を持ち帰ろう。料理人が焼いてくれる（火のそばで「作業」長押しでも焼ける）'],
+      [()=>roleN('guard')>=2,'上の「住民」で住民管理。焼肉3個で住民を募集し、衛兵を2人配置しよう'],
+      [()=>G.raid.triggered,'「食べる」で焼肉を食べてHP回復。目標1〜5を達成すると最初の敵襲が来る'],
+      [()=>G.stats.raids>=1,'敵は柵を壊して侵入してくる。外へ迎え撃とう。画面右側をタップすると対象の情報が見られる'],
+    ]:[
+      [()=>G.stats.leftHome,'WASDで移動。柵の外へ出て、針葉樹に近づこう（柵は味方なら通り抜けられる）'],
+      [()=>G.stats.wood>=5||G.player.bag.wood>=5,'左クリックで木を伐採（Eでも可）。木材は背負い袋に入る'],
+      [()=>G.stats.wood>=5,'領地に戻ると、背負い袋の資源が自動で倉庫に入る'],
+      [()=>G.stats.expands>=1,'Bキーで拡張モード。領地に隣接するマスをクリックし、現場でEを長押しすると早く建つ'],
+      [()=>G.stats.bears>=1,'ホッキョクグマを倒すと生肉が手に入る。Spaceで攻撃を回避しよう'],
+      [()=>G.stats.cooked>=1,'生肉を持ち帰ろう。料理人が焼いてくれる（火のそばでEを長押しすると自分でも焼ける）'],
+      [()=>roleN('guard')>=2,'Tabで住民管理。焼肉3個で住民を募集し、衛兵を2人配置しよう'],
+      [()=>G.raid.triggered,'Qで焼肉を食べてHP回復。目標1〜5を達成すると最初の敵襲が来る'],
+      [()=>G.stats.raids>=1,'敵は柵を壊して侵入してくる。外へ迎え撃とう。右クリックで対象の情報が見られる'],
+    ];
+    for(const [c,t] of T)if(!c())return t;
+    return '';
+  }
+  if(G.time<25){
+    if(G.sd.id===2)return '住民の分業で資源を自動化しよう。まず作業場を建てて技術Lv2を研究し、倉庫と見張り台を解放する';
+    if(G.sd.id===3)return '敵の大型拠点が'+dirName(Math.atan2(G.structs[0].y-G.campfire.y,G.structs[0].x-G.campfire.x))+'にある。襲撃は複数方向から来る。防壁と見張り台を固めよう';
+  }
+  if(G.hunger>0)return '焼肉が足りない。狩人を増やすか、クマを狩って料理人に焼かせよう';
+  if(roleN('idle')>0&&G.time%20<6)return '待機中の住民がいる。'+(TOUCH?'「住民」':'Tab')+'で役割を割り当てよう';
+  return '';
+}
+function updInfo(){
+  const o=G.inspect;
+  if(!o||o.dead||(o.kind==='site'&&!G.sites.has(cellIdx(o.cx,o.cy)))||(o.kind==='fence'&&G.fences.get(o.key)!==o)){$('info').hidden=true;G.inspect=null;return;}
+  const rows=[];let title=o.name||'';
+  const hp=()=>rows.push(['HP',Math.ceil(o.hp)+'/'+o.maxHp]);
+  switch(o.kind){
+    case 'player':title='リーダー（あなた）';hp();rows.push(['背負い袋',bagTotal()+'/'+BAL.player.bag]);break;
+    case 'res':title='住民：'+ROLE[o.role].name;hp();rows.push(['状態',o.state||'-']);rows.push(['役割',ROLE[o.role].desc]);break;
+    case 'building':hp();rows.push(['状態',o.built?'稼働中':'建設中 '+Math.floor(o.work/o.need*100)+'%']);rows.push(['機能',o.def.desc]);if(o.type==='campfire')rows.push(['調理',G.residents.filter(u=>u.role==='cook').length+'人が担当']);break;
+    case 'site':title='拡張予定地';rows.push(['進捗',Math.floor(o.work/o.need*100)+'%']);rows.push(['使用木材',o.cost]);rows.push(['作業','建築士かEの長押し']);break;
+    case 'fence':hp();rows.push(['状態',o.hp<=0?'破壊（侵入口）':'健在']);rows.push(['修理','建築士が自動修理／E']);break;
+    case 'tree':title='針葉樹';rows.push(['残り木材',o.wood+'/'+o.max]);break;
+    case 'struct':hp();rows.push(['説明','倒すと襲撃の頻度が下がる']);break;
+    default:title=o.name;hp();rows.push(['攻撃力',Math.round(o.dmg||0)]);if(o.lv>1.01)rows.push(['危険度','×'+o.lv.toFixed(2)]);
+      if(o.def&&o.def.drop)rows.push(['ドロップ',(o.def.drop[0]==='wood'?'木材':'生肉')+' '+o.def.drop[1]]);
+      if(o.kind==='raider'||o.kind==='brute')rows.push(['行動',o.mode==='defend'?'拠点の防衛':'領地を襲撃']);
+  }
+  setHTML('infoBody','<h4>'+title+'</h4>'+rows.map(([k,v])=>'<div class="row"><span>'+k+'</span><span>'+v+'</span></div>').join(''));
+  $('info').hidden=false;
+}
+function openManage(){if(!G||G.state!=='play')return;G.panel=true;G.mode=null;$('manage').hidden=false;$('mgMsg').textContent='';buildRoleRows();updManage();}
+function closeManage(){if(!G)return;G.panel=false;$('manage').hidden=true;}
+function buildRoleRows(){
+  const box=$('roleRows');box.innerHTML='';
+  for(const r of ROLES){
+    const row=document.createElement('div');row.className='rolerow';
+    row.innerHTML='<span class="dot" style="background:'+r.color+'"></span><span><span class="rn">'+r.name+'</span><span class="rd">'+r.desc+'</span></span>';
+    const minus=document.createElement('button');minus.textContent='−';minus.id='rm_'+r.id;minus.setAttribute('aria-label',r.name+'を減らす');
+    const cnt=document.createElement('span');cnt.className='cnt';cnt.id='rc_'+r.id;
+    const plus=document.createElement('button');plus.textContent='+';plus.id='rp_'+r.id;plus.setAttribute('aria-label',r.name+'を増やす');
+    if(r.id==='idle'){minus.style.visibility='hidden';plus.style.visibility='hidden';}
+    minus.onclick=()=>{const u=G.residents.find(x=>x.role===r.id);if(u){setRole(u,'idle');updManage();}};
+    plus.onclick=()=>{const u=G.residents.find(x=>x.role==='idle');if(u){setRole(u,r.id);updManage();}else $('mgMsg').textContent='待機中の住民がいない。他の役割から−で戻すか、住民を募集しよう';};
+    row.append(minus,cnt,plus);box.appendChild(row);
+  }
+}
+function updManage(){
+  for(const r of ROLES){const c=$('rc_'+r.id);if(c)c.textContent=roleN(r.id);const m=$('rm_'+r.id);if(m)m.disabled=roleN(r.id)===0;const p=$('rp_'+r.id);if(p)p.disabled=roleN('idle')===0;}
+  $('mgPop').textContent='住民 '+pop()+' / '+popCap()+'　焼肉 '+G.res.cooked;
+  $('btnRecruit').disabled=pop()>=popCap()||G.res.cooked<BAL.recruitCost;
+}
+function recruit(){
+  if(!G)return;
+  if(pop()>=popCap()){$('mgMsg').textContent='人口上限に達している。住居を建てよう';return;}
+  if(G.res.cooked<BAL.recruitCost){$('mgMsg').textContent='焼肉が足りない（3個必要）';return;}
+  G.res.cooked-=BAL.recruitCost;const a=Math.random()*TAU;spawnResident('idle',G.campfire.x+Math.cos(a)*50,G.campfire.y+Math.sin(a)*50);
+  $('mgMsg').textContent='新しい住民が加わった（待機）。役割を割り当てよう';updManage();
+}
+
+// ---------------- INPUT ----------------
+function pickEntity(wx,wy){
+  let best=null,bd=1e9;
+  const test=(o,r,yo)=>{if(!o||o.dead)return;const d=dist(wx,wy,o.x,o.y-(yo||14));if(d<r&&d<bd){bd=d;best=o;}};
+  for(const m of G.mobs)test(m,m.r+14);
+  for(const u of G.residents)test(u,20);
+  test(G.player,20);
+  for(const s of G.structs)test(s,s.r+10,20);
+  for(const b of G.buildings)test(b,34,b.type==='campfire'?10:14);
+  if(best)return best;
+  for(const s of G.sites.values())if(Math.abs(wx-s.x)<CELL/2&&Math.abs(wy-s.y)<CELL/2)return s;
+  for(const f of G.fences.values()){const d=distToSeg(wx,wy,f.x1,f.y1-10,f.x2,f.y2-10);if(d<12&&d<bd){bd=d;best=f;}}
+  if(best)return best;
+  for(const t of G.trees){if(t.wood<=0)continue;const d=dist(wx,wy,t.x,t.y-30*t.s);if(d<26&&d<bd){bd=d;best=t;}}
+  return best;
+}
+cv.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.in=true;});
+cv.addEventListener('mouseleave',()=>{mouse.in=false;mouse.down=false;$('tip').hidden=true;});
+cv.addEventListener('mouseenter',()=>{mouse.in=true;});
+cv.addEventListener('mousedown',e=>{
+  if(!G||G.state!=='play'||G.panel)return;
+  mouse.in=true;
+  if(e.button===0){
+    if(G.mode==='expand'){if(G.hover)orderExpand(G.hover.cx,G.hover.cy);}
+    else if(G.mode&&G.mode.build){if(G.hover&&orderBuild(G.mode.build,G.hover.cx,G.hover.cy)&&!e.shiftKey)G.mode=null;}
+    else mouse.down=true;
+  }else if(e.button===2){
+    if(G.mode){G.mode=null;}
+    else{G.inspect=pickEntity(mouse.wx,mouse.wy);}
+  }
+  lastHud=0;
+});
+addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{if(!G)return;e.preventDefault();G.cam.zoom=clamp(G.cam.zoom*(e.deltaY>0?0.9:1.1),0.55,1.5);},{passive:false});
+addEventListener('keydown',e=>{
+  if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  keys[e.code]=true;if(e.repeat)return;
+  if(e.code==='Backquote'){DEBUG=!DEBUG;if(G)banner('デバッグ '+(DEBUG?'ON（Shift+1 資源 / Shift+2 敵襲 / Shift+3 目標達成 / Shift+4 無敵）':'OFF'));return;}
+  if(!G)return;
+  if(G.state==='pause'){if(e.code==='Escape')resume();return;}
+  if(G.state!=='play')return;
+  if(G.panel){if(e.code==='Tab'||e.code==='Escape')closeManage();return;}
+  if(DEBUG&&e.shiftKey){
+    if(e.code==='Digit1'){G.res.wood=cap('wood');G.res.raw=cap('raw');G.res.cooked=cap('cooked');G.res.tp+=50;banner('デバッグ：資源を追加');return;}
+    if(e.code==='Digit2'){G.raid.t=G.raid.next;if(!G.sd.raids){G.raid.warn=null;launchRaid({angs:[Math.random()*TAU],sizes:[4]});}return;}
+    if(e.code==='Digit3'){debugCompleteObjectives();return;}
+    if(e.code==='Digit4'){G.godMode=!G.godMode;banner('デバッグ：無敵 '+(G.godMode?'ON':'OFF'));return;}
+  }
+  switch(e.code){
+    case 'Escape':if(G.mode){G.mode=null;}else if(G.inspect){G.inspect=null;}else pause();break;
+    case 'Tab':openManage();break;
+    case 'Space':playerDodge();break;
+    case 'KeyB':toggleMode('expand');break;
+    case 'KeyQ':playerEat();break;
+    case 'Digit1':G.player.weapon='axe';break;
+    case 'Digit2':if(G.tech>=2)G.player.weapon='bow';else banner('弓は技術Lv2で解放','bad');break;
+  }
+  lastHud=0;
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouse.down=false;});
+function pause(){if(!G||G.state!=='play')return;G.state='pause';$('pause').hidden=false;}
+function resume(){if(!G)return;G.state='play';$('pause').hidden=true;}
+$('btnResume').onclick=resume;
+$('btnRetryP').onclick=()=>startStage(G.si);
+$('btnTitleP').onclick=showTitle;
+$('btnRetry').onclick=()=>startStage(G.si);
+$('btnTitleO').onclick=showTitle;
+$('btnRecruit').onclick=recruit;
+$('btnCloseMg').onclick=closeManage;
+function debugCompleteObjectives(){
+  const s=G.stats;s.wood=Math.max(s.wood,200);s.bears=Math.max(s.bears,5);s.cooked=Math.max(s.cooked,10);
+  banner('デバッグ：集計系の目標を達成扱いにした');
+}
+
+// ---------------- TOUCH ----------------
+const touchZoom=()=>clamp(Math.min(VW,VH)/620,0.55,1);
+function enableTouch(){
+  if(TOUCH)return;TOUCH=true;document.body.classList.add('touch');
+  const body=$('drawerBody');body.append($('left').firstElementChild,$('right').firstElementChild);
+  if(G&&G.state!=='title'){$('touchUI').hidden=false;$('tutil').hidden=false;G.cam.zoom=touchZoom();}
+  hudCache={};lastHud=0;
+}
+function resetStick(){stick.id=null;stick.vx=stick.vy=0;const st=$('stick');st.classList.remove('on');st.style.left='';st.style.top='';$('knob').style.transform='';placeStickIdle();}
+function placeStickIdle(){const st=$('stick');st.style.left=(92+Math.max(0,parseFloat(getComputedStyle(document.documentElement).paddingLeft)||0))+'px';st.style.top=(VH-112)+'px';}
+function tapAt(x,y){
+  if(!G||G.state!=='play')return;
+  const w=screenToWorld(x,y);
+  if(G.mode){G.touchSel={cx:cellOf(w.x),cy:cellOf(w.y)};}
+  else{G.inspect=pickEntity(w.x,w.y);}
+  lastHud=0;
+}
+cv.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse')return;
+  enableTouch();e.preventDefault();
+  if(!G||G.state!=='play'||G.panel||G.drawer)return;
+  try{cv.setPointerCapture(e.pointerId);}catch(_){}
+  if(e.clientX<VW*0.5&&stick.id===null){
+    stick.id=e.pointerId;stick.ox=e.clientX;stick.oy=e.clientY;stick.vx=stick.vy=0;stick.t0=performance.now();stick.moved=0;
+    const st=$('stick');st.classList.add('on');st.style.left=e.clientX+'px';st.style.top=e.clientY+'px';$('knob').style.transform='';
+  }else if(tapP.id===null){tapP.id=e.pointerId;tapP.x=e.clientX;tapP.y=e.clientY;tapP.t0=performance.now();tapP.moved=0;}
+},{passive:false});
+cv.addEventListener('pointermove',e=>{
+  if(e.pointerType==='mouse')return;
+  if(e.pointerId===stick.id){
+    let dx=e.clientX-stick.ox,dy=e.clientY-stick.oy;const d=Math.hypot(dx,dy);stick.moved=Math.max(stick.moved,d);
+    const R=52;if(d>R){dx=dx/d*R;dy=dy/d*R;}
+    stick.vx=dx/R;stick.vy=dy/R;$('knob').style.transform='translate('+dx+'px,'+dy+'px)';
+  }else if(e.pointerId===tapP.id){tapP.moved=Math.max(tapP.moved,Math.hypot(e.clientX-tapP.x,e.clientY-tapP.y));}
+},{passive:false});
+function endPointer(e){
+  if(e.pointerType==='mouse')return;
+  if(e.pointerId===stick.id){
+    const quick=performance.now()-stick.t0<320&&stick.moved<14;
+    resetStick();
+    if(quick&&e.type==='pointerup')tapAt(e.clientX,e.clientY);
+  }else if(e.pointerId===tapP.id){
+    if(tapP.moved<16&&e.type==='pointerup')tapAt(e.clientX,e.clientY);
+    tapP.id=null;
+  }
+}
+cv.addEventListener('pointerup',endPointer);
+cv.addEventListener('pointercancel',endPointer);
+addEventListener('touchstart',()=>enableTouch(),{passive:true,once:true});
+// hold buttons
+function holdBtn(id,down,up){
+  const b=$(id);
+  b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}b.classList.add('held');down();});
+  const off=e=>{b.classList.remove('held');if(up)up();};
+  b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+}
+holdBtn('tAtk',()=>{touchAtk=true;},()=>{touchAtk=false;});
+holdBtn('tAct',()=>{keys.KeyE=true;},()=>{keys.KeyE=false;});
+holdBtn('tDodge',()=>{if(G&&G.state==='play'&&!G.panel&&!G.drawer)playerDodge();});
+holdBtn('tEat',()=>{if(G&&G.state==='play')playerEat();});
+holdBtn('tWpn',()=>{if(!G||G.state!=='play')return;if(G.player.weapon==='axe'){if(G.tech>=2)G.player.weapon='bow';else banner('弓は技術Lv2で解放','bad');}else G.player.weapon='axe';lastHud=0;});
+function openDrawer(){if(!G||G.state!=='play')return;G.drawer=true;G.mode=null;touchAtk=false;keys.KeyE=false;resetStick();$('drawer').hidden=false;lastHud=0;updHud();}
+function closeDrawer(){if(!G)return;G.drawer=false;$('drawer').hidden=true;lastHud=0;}
+$('tMenu').onclick=openDrawer;
+$('btnCloseDr').onclick=closeDrawer;
+$('tExp').onclick=()=>toggleMode('expand');
+$('tMng').onclick=()=>openManage();
+$('tZoom').onclick=()=>{if(!G)return;const z=[0.55,0.75,1.0];const i=z.findIndex(v=>v>G.cam.zoom+0.01);G.cam.zoom=i<0?z[0]:z[i];};
+$('tPause').onclick=()=>pause();
+$('tPlaceNo').onclick=()=>{if(G){G.mode=null;G.touchSel=null;lastHud=0;}};
+$('tPlaceOk').onclick=()=>{
+  if(!G||!G.mode||!G.touchSel)return;const s=G.touchSel;
+  if(G.mode==='expand'){if(orderExpand(s.cx,s.cy))G.touchSel=null;}
+  else if(G.mode.build){if(orderBuild(G.mode.build,s.cx,s.cy)){G.mode=null;G.touchSel=null;}}
+  lastHud=0;
+};
+function updTouchHud(){
+  // weapon label, status chip, context-aware action button
+  $('tWpn').textContent=G.player.weapon==='axe'?'斧':'弓';
+  const p=G.player;$('tHp').style.width=(p.hp/p.maxHp*100)+'%';setHTML('tHpTxt',Math.max(0,Math.ceil(p.hp))+'');setHTML('tBag','袋 '+bagTotal()+'/'+BAL.player.bag);
+  const a=G.ctxAct;setHTML('tAct',!a?'作業':a.type==='site'||a.type==='build'?'建設':a.type==='cook'?'調理':a.type==='repair'||a.type==='repairB'?'修理':'作業');
+  $('tExp').classList.toggle('on',G.mode==='expand');
+  // placement bar
+  const tp=$('tPlace');tp.hidden=!G.mode;
+  if(G.mode){
+    const s=G.touchSel;let txt,ok=false;
+    if(!s)txt=G.mode==='expand'?'拡張するマスをタップ（木材 '+expandCost()+'）':BAL.bld[G.mode.build].name+'を建てるマスをタップ（木材 '+BAL.bld[G.mode.build].cost+'）';
+    else if(G.mode==='expand'){const c=expandCost();if(!canExpand(s.cx,s.cy))txt='そのマスは拡張できない（領地の隣のみ）';else{ok=G.res.wood>=c;txt='拡張：木材 '+c+'（所持 '+G.res.wood+'）'+(ok?'':'　木材が足りない');}}
+    else{const c=canPlace(G.mode.build,s.cx,s.cy);ok=c.ok;txt=BAL.bld[G.mode.build].name+'：木材 '+BAL.bld[G.mode.build].cost+(c.ok?'':'　'+c.why);}
+    setHTML('tPlaceTxt',txt);$('tPlaceOk').disabled=!ok;
+  }
+  // stack the top HUD pieces so nothing overlaps on a narrow screen
+  let y=$('top').getBoundingClientRect().bottom+6;
+  for(const id of ['tutil','tPlace','hint','banners','boss','info']){
+    const el=$(id);if(el.hidden)continue;
+    el.style.top=y+'px';
+    const h=el.getBoundingClientRect().height;if(h)y+=h+6;
+  }
+  if(stick.id===null)placeStickIdle();
+}
+
+// ---------------- LOOP ----------------
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(innerWidth!==VW||innerHeight!==VH)resize();
+  if(G){
+    const w=screenToWorld(mouse.x,mouse.y);mouse.wx=w.x;mouse.wy=w.y;
+    G.hover=G.mode?(TOUCH?G.touchSel:{cx:cellOf(w.x),cy:cellOf(w.y)}):null;
+    update(dt);
+    if(G){
+      const tip=$('tip');
+      if(TOUCH)tip.hidden=true;
+      else if(G.mode==='expand'&&G.hover&&canExpand(G.hover.cx,G.hover.cy)&&mouse.in){const c=expandCost();tip.innerHTML='拡張：木材 <b class="num'+(G.res.wood<c?' no':'')+'">'+c+'</b>（所持 '+G.res.wood+'）';tip.hidden=false;tip.style.left=(mouse.x+16)+'px';tip.style.top=(mouse.y+12)+'px';}
+      else if(G.mode&&G.mode.build&&G.hover&&mouse.in){const c=canPlace(G.mode.build,G.hover.cx,G.hover.cy);const d=BAL.bld[G.mode.build];tip.innerHTML=d.name+'：木材 '+d.cost+(c.ok?'':'　<span class="no">'+c.why+'</span>');tip.hidden=false;tip.style.left=(mouse.x+16)+'px';tip.style.top=(mouse.y+12)+'px';}
+      else tip.hidden=true;
+      if(now-lastHud>100){lastHud=now;updHud();}
+    }
+  }
+  render(dt);
+  requestAnimationFrame(frame);
+}
+showTitle();
+requestAnimationFrame(frame);
+
+// test hook (used for automated checks; harmless in play)
+window.FF={get G(){return G;},startStage,update,STAGES,BAL,orderExpand,orderBuild,research,upgradeFences,setRole,recruit,launchRaid,computeFlow,playerAttack,canExpand,expandCost,completeExpand,completeBuild,objsDone,spawnResident,keys,mouse,popCap,hurt,cap,playerEat,dodge:playerDodge,enableTouch,stick,tapAt,get touchAtk(){return touchAtk;},set touchAtk(v){touchAtk=v;}};
+</script>
+
+</body></html>
