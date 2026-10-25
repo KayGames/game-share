@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ブロックパズル</title>
+<meta name="description" content="ホールドとネクスト付きの本格ブロック落としパズル。スマホ操作対応。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#11141b;
+  --panel:#181d27;
+  --panel-2:#1f2530;
+  --well:#0d1016;
+  --line:#2a3240;
+  --ink:#e9ecf2;
+  --dim:#8b94a6;
+  --accent:#ffb454;
+  --btn:#222a36;
+  --btn-active:#39435a;
+  --shadow:rgba(0,0,0,.45);
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="light"]){
+    --ground:#e6e9ef;
+    --panel:#ffffff;
+    --panel-2:#f1f3f7;
+    --well:#12161d;
+    --line:#d3d8e2;
+    --ink:#1a1f29;
+    --dim:#6b7380;
+    --accent:#c6721a;
+    --btn:#ffffff;
+    --btn-active:#dfe4ed;
+    --shadow:rgba(20,26,38,.14);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#11141b;--panel:#181d27;--panel-2:#1f2530;--well:#0d1016;--line:#2a3240;
+  --ink:#e9ecf2;--dim:#8b94a6;--accent:#ffb454;--btn:#222a36;--btn-active:#39435a;--shadow:rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,-apple-system,sans-serif;
+  overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:none;
+  user-select:none;-webkit-user-select:none;
+}
+.app{
+  height:100%;height:100dvh;
+  display:flex;flex-direction:column;
+  padding:max(6px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom));
+  gap:8px;max-width:520px;margin:0 auto;
+}
+/* ---- HUD ---- */
+.hud{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:2px 4px 0}
+.score{display:flex;flex-direction:column;line-height:1}
+.score .n{font-family:"Chakra Petch",monospace;font-size:30px;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.score .t{font-size:10px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
+.meta{display:flex;gap:14px;text-align:right}
+.meta div{display:flex;flex-direction:column;line-height:1}
+.meta .n{font-family:"Chakra Petch",monospace;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.meta .t{font-size:9px;color:var(--dim);margin-top:4px}
+/* ---- play area ---- */
+.play{flex:1;min-height:0;display:flex;gap:8px;align-items:stretch;justify-content:center}
+.rail{flex:0 0 auto;width:16%;max-width:62px;min-width:44px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.rail .cap{font-size:9px;color:var(--dim);letter-spacing:.06em;padding-left:2px}
+.slot{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;display:flex;justify-content:center}
+.rail.right .slot{flex:1;align-items:flex-start}
+.boardwrap{flex:1 1 0;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;min-width:0}
+#board{
+  display:block;border-radius:10px;background:var(--well);
+  box-shadow:0 6px 22px var(--shadow), inset 0 0 0 1px rgba(255,255,255,.05);
+  touch-action:none;
+}
+canvas{display:block}
+/* ---- overlay ---- */
+#overlay{
+  position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;border-radius:10px;background:rgba(10,13,18,.82);backdrop-filter:blur(3px);text-align:center;padding:18px;
+}
+#overlay.on{display:flex}
+#overlay h2{margin:0;font-family:"Chakra Petch",monospace;font-size:24px;font-weight:700;color:#fff;letter-spacing:.04em}
+#overlay p{margin:0;font-size:13px;color:#b9c1d0;line-height:1.7}
+#overlay .big{font-family:"Chakra Petch",monospace;font-size:36px;color:var(--accent);font-weight:700}
+#overlay button{
+  font:inherit;font-size:15px;font-weight:600;color:#11141b;background:var(--accent);
+  border:0;border-radius:999px;padding:12px 30px;cursor:pointer;
+}
+#overlay button:active{transform:translateY(1px)}
+/* ---- pad ---- */
+.pad{display:flex;gap:16px;padding:0 2px;align-items:stretch}
+.cluster{flex:1 1 0;display:grid;grid-template-columns:1fr 1fr;gap:7px;min-width:0}
+.pad button{
+  font:inherit;color:var(--ink);background:var(--btn);
+  border:1px solid var(--line);border-radius:12px;
+  height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:22px;line-height:1;cursor:pointer;touch-action:none;
+  box-shadow:0 2px 0 var(--shadow);
+}
+.pad button .lab{font-size:9px;color:var(--dim);letter-spacing:.04em}
+.pad button:active,.pad button.down{background:var(--btn-active);box-shadow:none;transform:translateY(2px)}
+.pad button.wide{grid-column:span 2}
+.pad .primary{color:var(--accent)}
+.pad .drop{background:var(--panel-2);border-color:var(--accent);color:var(--accent)}
+.topbtn{
+  background:none;border:0;color:var(--dim);font:inherit;font-size:12px;padding:6px 8px;cursor:pointer;
+}
+@media (max-height:620px){
+  .pad button{height:46px;font-size:19px}
+  .score .n{font-size:24px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hud">
+    <div class="score"><span class="n" id="score">0</span><span class="t">スコア</span></div>
+    <div class="meta">
+      <div><span class="n" id="best">0</span><span class="t">ベスト</span></div>
+      <div><span class="n" id="lines">0</span><span class="t">ライン</span></div>
+      <div><span class="n" id="level">1</span><span class="t">レベル</span></div>
+      <button class="topbtn" id="pauseBtn">‖ 一時停止</button>
+    </div>
+  </div>
+
+  <div class="play">
+    <div class="rail left">
+      <span class="cap">ホールド</span>
+      <div class="slot"><canvas id="hold"></canvas></div>
+    </div>
+    <div class="boardwrap" id="boardwrap">
+      <canvas id="board"></canvas>
+      <div id="overlay">
+        <h2 id="ovTitle">ブロックパズル</h2>
+        <p id="ovText">スワイプで移動、タップで回転。<br>下に長くスワイプで一気に落とす。</p>
+        <button id="ovBtn">はじめる</button>
+      </div>
+    </div>
+    <div class="rail right">
+      <span class="cap">ネクスト</span>
+      <div class="slot"><canvas id="next"></canvas></div>
+    </div>
+  </div>
+
+  <div class="pad">
+    <div class="cluster">
+      <button data-act="left">←<span class="lab">左へ</span></button>
+      <button data-act="right">→<span class="lab">右へ</span></button>
+      <button data-act="soft" class="wide">↓<span class="lab">ゆっくり落とす</span></button>
+    </div>
+    <div class="cluster">
+      <button data-act="ccw">↺<span class="lab">左回転</span></button>
+      <button data-act="cw" class="primary">↻<span class="lab">右回転</span></button>
+      <button data-act="hold">⇄<span class="lab">ホールド</span></button>
+      <button data-act="hard" class="drop">⤓<span class="lab">一気に落とす</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const COLS=10, ROWS=20, HIDE=2, TOT=ROWS+HIDE;
+
+const P = {
+  I:{c:'#58c7d6', n:4, cells:[[0,1],[1,1],[2,1],[3,1]]},
+  J:{c:'#5a7fd6', n:3, cells:[[0,0],[0,1],[1,1],[2,1]]},
+  L:{c:'#e0913f', n:3, cells:[[2,0],[0,1],[1,1],[2,1]]},
+  O:{c:'#e3c64a', n:2, cells:[[0,0],[1,0],[0,1],[1,1]]},
+  S:{c:'#6bc26b', n:3, cells:[[1,0],[2,0],[0,1],[1,1]]},
+  T:{c:'#a96fd1', n:3, cells:[[1,0],[0,1],[1,1],[2,1]]},
+  Z:{c:'#d65c58', n:3, cells:[[0,0],[1,0],[1,1],[2,1]]}
+};
+const KEYS=['I','J','L','O','S','T','Z'];
+
+// SRS kicks (y flipped for screen coords: +y = down)
+const K_JLSTZ={
+ '01':[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+ '10':[[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+ '12':[[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+ '21':[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+ '23':[[0,0],[1,0],[1,-1],[0,2],[1,2]],
+ '32':[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+ '30':[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+ '03':[[0,0],[1,0],[1,-1],[0,2],[1,2]]
+};
+const K_I={
+ '01':[[0,0],[-2,0],[1,0],[-2,1],[1,-2]],
+ '10':[[0,0],[2,0],[-1,0],[2,-1],[-1,2]],
+ '12':[[0,0],[-1,0],[2,0],[-1,-2],[2,1]],
+ '21':[[0,0],[1,0],[-2,0],[1,2],[-2,-1]],
+ '23':[[0,0],[2,0],[-1,0],[2,-1],[-1,2]],
+ '32':[[0,0],[-2,0],[1,0],[-2,1],[1,-2]],
+ '30':[[0,0],[1,0],[-2,0],[1,2],[-2,-1]],
+ '03':[[0,0],[-1,0],[2,0],[-1,-2],[2,1]]
+};
+
+const GRAV=[0,900,780,660,550,450,360,280,210,150,110,85,65,50,40,32,26,21,17,14,11];
+const gravity = l => l<GRAV.length ? GRAV[l] : 9;
+
+// ---------- state ----------
+let grid, cur, bag=[], queue=[], hold=null, canHold=true;
+let score=0, lines=0, level=1, best=0, combo=-1, backToBack=false;
+let dropTimer=0, lockTimer=0, lockResets=0, softHeld=false;
+let state='title'; // title | play | pause | over
+let last=0, flash=null;
+
+const $=id=>document.getElementById(id);
+const boardC=$('board'), bctx=boardC.getContext('2d');
+const nextC=$('next'),  nctx=nextC.getContext('2d');
+const holdC=$('hold'),  hctx=holdC.getContext('2d');
+let cell=24, dpr=1;
+
+try{ const b=localStorage.getItem('bp_best'); if(b) best=parseInt(b,10)||0; }catch(e){}
+$('best').textContent=best;
+
+function emptyGrid(){ return Array.from({length:TOT},()=>new Array(COLS).fill(null)); }
+
+function refill(){
+  const b=KEYS.slice();
+  for(let i=b.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [b[i],b[j]]=[b[j],b[i]]; }
+  bag=bag.concat(b);
+}
+function pull(){ if(bag.length<7) refill(); return bag.shift(); }
+
+function makePiece(k){
+  const d=P[k];
+  return {k, r:0, cells:d.cells.map(c=>c.slice()), n:d.n, c:d.c,
+          x: k==='O'?4:3, y: HIDE-1};
+}
+function shapeAt(p,r){
+  let cs=P[p.k].cells.map(c=>c.slice());
+  const n=p.n;
+  for(let i=0;i<r;i++) cs=cs.map(([x,y])=>[n-1-y,x]);
+  return cs;
+}
+function collide(p,x,y,r){
+  const cs=shapeAt(p,r);
+  for(const [cx,cy] of cs){
+    const gx=x+cx, gy=y+cy;
+    if(gx<0||gx>=COLS||gy>=TOT) return true;
+    if(gy>=0 && grid[gy][gx]) return true;
+  }
+  return false;
+}
+function spawn(k){
+  while(queue.length<5) queue.push(pull());
+  const key = k || queue.shift();
+  cur = makePiece(key);
+  while(queue.length<5) queue.push(pull());
+  dropTimer=0; lockTimer=0; lockResets=0;
+  if(collide(cur,cur.x,cur.y,0)){ gameOver(); return false; }
+  return true;
+}
+
+function move(dx){
+  if(!cur) return false;
+  if(!collide(cur,cur.x+dx,cur.y,cur.r)){ cur.x+=dx; touchLock(); return true; }
+  return false;
+}
+function rotate(dir){
+  if(!cur||cur.k==='O') return false;
+  const from=cur.r, to=(cur.r+(dir>0?1:3))%4;
+  const table = cur.k==='I'?K_I:K_JLSTZ;
+  const kicks = table[''+from+to]||[[0,0]];
+  for(const [kx,ky] of kicks){
+    if(!collide(cur,cur.x+kx,cur.y+ky,to)){
+      cur.x+=kx; cur.y+=ky; cur.r=to; touchLock(); return true;
+    }
+  }
+  return false;
+}
+function touchLock(){ if(lockTimer>0 && lockResets<15){ lockTimer=0; lockResets++; } }
+
+function stepDown(soft){
+  if(!cur) return;
+  if(!collide(cur,cur.x,cur.y+1,cur.r)){
+    cur.y++; dropTimer=0; if(soft) score+=1;
+  }
+}
+function ghostY(){
+  let y=cur.y;
+  while(!collide(cur,cur.x,y+1,cur.r)) y++;
+  return y;
+}
+function hardDrop(){
+  if(!cur) return;
+  const gy=ghostY();
+  score += (gy-cur.y)*2;
+  cur.y=gy;
+  lockPiece();
+}
+function doHold(){
+  if(!cur||!canHold) return;
+  const k=cur.k;
+  if(hold===null){ hold=k; spawn(); }
+  else { const h=hold; hold=k; spawn(h); }
+  canHold=false;
+  paint();
+}
+
+function lockPiece(){
+  const cs=shapeAt(cur,cur.r);
+  for(const [cx,cy] of cs){
+    const gy=cur.y+cy, gx=cur.x+cx;
+    if(gy>=0 && gy<TOT) grid[gy][gx]=cur.c;
+  }
+  // clear lines
+  const full=[];
+  for(let y=0;y<TOT;y++) if(grid[y].every(v=>v)) full.push(y);
+  if(full.length){
+    const n=full.length;
+    for(const y of full){ grid.splice(y,1); grid.unshift(new Array(COLS).fill(null)); }
+    lines+=n;
+    const base=[0,100,300,500,800][n];
+    let add=base*level;
+    if(n===4){ if(backToBack) add=Math.round(add*1.5); backToBack=true; }
+    else backToBack=false;
+    combo++;
+    if(combo>0) add += 50*combo*level;
+    score+=add;
+    flash={t:260, rows:full.slice(), n:n};
+    const nl=Math.floor(lines/10)+1;
+    if(nl>level) level=nl;
+  } else {
+    combo=-1;
+  }
+  canHold=true;
+  cur=null;
+  updateHud();
+  spawn();
+}
+
+function gameOver(){
+  state='over';
+  cur=null;
+  if(score>best){ best=score; try{localStorage.setItem('bp_best',String(best));}catch(e){} }
+  updateHud();
+  $('ovTitle').textContent='ゲームオーバー';
+  $('ovText').innerHTML='スコア <span class="big">'+score+'</span><br>'+lines+' ライン・レベル '+level;
+  $('ovBtn').textContent='もう一度';
+  $('overlay').classList.add('on');
+  paint();
+}
+
+function reset(){
+  grid=emptyGrid(); bag=[]; queue=[]; hold=null; canHold=true;
+  score=0; lines=0; level=1; combo=-1; backToBack=false; flash=null;
+  softHeld=false; dropTimer=0; lockTimer=0; lockResets=0;
+  state='play';
+  $('overlay').classList.remove('on');
+  spawn();
+  updateHud(); paint();
+}
+
+function updateHud(){
+  $('score').textContent=score;
+  $('lines').textContent=lines;
+  $('level').textContent=level;
+  $('best').textContent=Math.max(best,score);
+}
+
+// ---------- drawing ----------
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+function shade(hex,amt){
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  const f=x=> Math.max(0,Math.min(255, Math.round(amt>0 ? x+(255-x)*amt : x*(1+amt))));
+  return 'rgb('+f(r)+','+f(g)+','+f(b)+')';
+}
+function tile(ctx,x,y,s,color,alpha){
+  const pad=Math.max(1,s*0.06), r=Math.max(2,s*0.16);
+  ctx.save();
+  if(alpha!=null) ctx.globalAlpha=alpha;
+  const x0=x+pad, y0=y+pad, w=s-pad*2, h=s-pad*2;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x0,y0,w,h,r); else ctx.rect(x0,y0,w,h);
+  const g=ctx.createLinearGradient(x0,y0,x0+w,y0+h);
+  g.addColorStop(0,shade(color,.22));
+  g.addColorStop(.55,color);
+  g.addColorStop(1,shade(color,-.28));
+  ctx.fillStyle=g; ctx.fill();
+  ctx.lineWidth=Math.max(1,s*0.05);
+  ctx.strokeStyle=shade(color,.42); ctx.globalAlpha=(alpha!=null?alpha:1)*0.55;
+  ctx.beginPath();
+  ctx.moveTo(x0+r,y0+ctx.lineWidth/2); ctx.lineTo(x0+w-r,y0+ctx.lineWidth/2);
+  ctx.stroke();
+  ctx.restore();
+}
+function ghostTile(ctx,x,y,s,color){
+  const pad=Math.max(1,s*0.06), r=Math.max(2,s*0.16);
+  ctx.save();
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x+pad,y+pad,s-pad*2,s-pad*2,r); else ctx.rect(x+pad,y+pad,s-pad*2,s-pad*2);
+  ctx.globalAlpha=.16; ctx.fillStyle=color; ctx.fill();
+  ctx.globalAlpha=.55;
+  ctx.lineWidth=Math.max(1.4,s*0.10);
+  ctx.strokeStyle=color;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function paint(){
+  const w=COLS*cell, h=ROWS*cell;
+  bctx.setTransform(dpr,0,0,dpr,0,0);
+  bctx.clearRect(0,0,w,h);
+  // well grid
+  bctx.strokeStyle='rgba(255,255,255,.045)'; bctx.lineWidth=1;
+  bctx.beginPath();
+  for(let x=1;x<COLS;x++){ bctx.moveTo(x*cell+.5,0); bctx.lineTo(x*cell+.5,h); }
+  for(let y=1;y<ROWS;y++){ bctx.moveTo(0,y*cell+.5); bctx.lineTo(w,y*cell+.5); }
+  bctx.stroke();
+
+  // drop column guide for the active piece
+  if(cur && state==='play'){
+    const cs0=shapeAt(cur,cur.r);
+    let mnx=99,mxx=-99;
+    for(const c of cs0){ if(c[0]<mnx)mnx=c[0]; if(c[0]>mxx)mxx=c[0]; }
+    const gx0=(cur.x+mnx)*cell, gw=(mxx-mnx+1)*cell;
+    const lg=bctx.createLinearGradient(0,0,0,h);
+    lg.addColorStop(0,'rgba(255,180,84,.03)');
+    lg.addColorStop(1,'rgba(255,180,84,.14)');
+    bctx.fillStyle=lg; bctx.fillRect(gx0,0,gw,h);
+    bctx.strokeStyle='rgba(255,180,84,.40)'; bctx.lineWidth=1;
+    bctx.beginPath();
+    bctx.moveTo(gx0+.5,0); bctx.lineTo(gx0+.5,h);
+    bctx.moveTo(gx0+gw-.5,0); bctx.lineTo(gx0+gw-.5,h);
+    bctx.stroke();
+  }
+
+  // stack
+  for(let y=HIDE;y<TOT;y++){
+    for(let x=0;x<COLS;x++){
+      const c=grid[y][x];
+      if(c) tile(bctx,x*cell,(y-HIDE)*cell,cell,c);
+    }
+  }
+  // ghost + current
+  if(cur && state==='play'){
+    const gy=ghostY(), cs=shapeAt(cur,cur.r);
+    for(const [cx,cy] of cs){
+      const yy=gy+cy;
+      if(yy>=HIDE) ghostTile(bctx,(cur.x+cx)*cell,(yy-HIDE)*cell,cell,cur.c);
+    }
+    for(const [cx,cy] of cs){
+      const yy=cur.y+cy;
+      if(yy>=HIDE) tile(bctx,(cur.x+cx)*cell,(yy-HIDE)*cell,cell,cur.c);
+    }
+  }
+  // clear flash
+  if(flash && flash.t>0){
+    const a=flash.t/260;
+    bctx.fillStyle='rgba(255,255,255,'+(a*0.55)+')';
+    for(const y of flash.rows){
+      if(y>=HIDE) bctx.fillRect(0,(y-HIDE)*cell,w,cell);
+    }
+  }
+  drawFrame(w,h);
+  paintPreview();
+}
+
+function drawFrame(w,h){
+  const r=10;
+  bctx.save();
+  // side walls
+  const lw=bctx.createLinearGradient(0,0,cell*0.5,0);
+  lw.addColorStop(0,'rgba(255,255,255,.20)'); lw.addColorStop(1,'rgba(255,255,255,0)');
+  bctx.fillStyle=lw; bctx.fillRect(0,0,cell*0.5,h);
+  const rw=bctx.createLinearGradient(w,0,w-cell*0.5,0);
+  rw.addColorStop(0,'rgba(255,255,255,.20)'); rw.addColorStop(1,'rgba(255,255,255,0)');
+  bctx.fillStyle=rw; bctx.fillRect(w-cell*0.5,0,cell*0.5,h);
+  // floor
+  const fl=bctx.createLinearGradient(0,h,0,h-cell*0.6);
+  fl.addColorStop(0,'rgba(255,255,255,.22)'); fl.addColorStop(1,'rgba(255,255,255,0)');
+  bctx.fillStyle=fl; bctx.fillRect(0,h-cell*0.6,w,cell*0.6);
+  // hard edges
+  bctx.lineWidth=2; bctx.strokeStyle='rgba(255,255,255,.30)';
+  bctx.beginPath();
+  bctx.moveTo(1,r); bctx.lineTo(1,h-r);
+  bctx.moveTo(w-1,r); bctx.lineTo(w-1,h-r);
+  bctx.moveTo(r,h-1); bctx.lineTo(w-r,h-1);
+  bctx.stroke();
+  // column ticks on the floor
+  bctx.lineWidth=1; bctx.strokeStyle='rgba(255,255,255,.22)';
+  bctx.beginPath();
+  for(let x=1;x<COLS;x++){ bctx.moveTo(x*cell+.5,h-1); bctx.lineTo(x*cell+.5,h-cell*0.28); }
+  bctx.stroke();
+  bctx.restore();
+}
+
+function paintPreview(){
+  const m=Math.max(6,Math.min(13,Math.round(cell*0.42)));
+  // next (3)
+  const show=queue.slice(0,3);
+  const nw=4*m, nh=show.length*3*m+ (show.length-1)*4;
+  nextC.width=nw*dpr; nextC.height=nh*dpr;
+  nextC.style.width=nw+'px'; nextC.style.height=nh+'px';
+  nctx.setTransform(dpr,0,0,dpr,0,0);
+  nctx.clearRect(0,0,nw,nh);
+  show.forEach((k,i)=>{ miniPiece(nctx,k,m,0,i*(3*m+4)); });
+  // hold
+  const hw=4*m, hh=3*m;
+  holdC.width=hw*dpr; holdC.height=hh*dpr;
+  holdC.style.width=hw+'px'; holdC.style.height=hh+'px';
+  hctx.setTransform(dpr,0,0,dpr,0,0);
+  hctx.clearRect(0,0,hw,hh);
+  if(hold) miniPiece(hctx,hold,m,0,0,!canHold);
+}
+function miniPiece(ctx,k,m,ox,oy,dim){
+  const d=P[k], cs=d.cells;
+  let minx=9,maxx=-9,miny=9,maxy=-9;
+  for(const [x,y] of cs){ minx=Math.min(minx,x);maxx=Math.max(maxx,x);miny=Math.min(miny,y);maxy=Math.max(maxy,y); }
+  const wcells=maxx-minx+1, hcells=maxy-miny+1;
+  const px=ox+(4*m-wcells*m)/2, py=oy+(3*m-hcells*m)/2;
+  for(const [x,y] of cs) tile(ctx,px+(x-minx)*m,py+(y-miny)*m,m,d.c,dim?0.3:1);
+}
+
+function resize(){
+  dpr=Math.min(window.devicePixelRatio||1,2.5);
+  const wrap=$('boardwrap');
+  const aw=wrap.clientWidth, ah=wrap.clientHeight;
+  if(aw<=0||ah<=0) return;
+  cell=Math.max(8,Math.floor(Math.min(aw/COLS, ah/ROWS)));
+  const w=COLS*cell, h=ROWS*cell;
+  boardC.style.width=w+'px'; boardC.style.height=h+'px';
+  boardC.width=Math.round(w*dpr); boardC.height=Math.round(h*dpr);
+  paint();
+}
+
+// ---------- loop ----------
+function frame(t){
+  const dt=Math.min(80, t-last||0); last=t;
+  if(state==='play'){
+    if(flash&&flash.t>0){ flash.t-=dt; if(flash.t<=0) flash=null; }
+    if(cur){
+      const g = softHeld ? Math.min(gravity(level),40) : gravity(level);
+      dropTimer+=dt;
+      if(dropTimer>=g){
+        dropTimer=0;
+        if(!collide(cur,cur.x,cur.y+1,cur.r)){ cur.y++; if(softHeld) score+=1; }
+      }
+      if(collide(cur,cur.x,cur.y+1,cur.r)){
+        lockTimer+=dt;
+        if(lockTimer>=480) lockPiece();
+      } else lockTimer=0;
+    }
+    paint();
+    updateHud();
+  } else if(flash){ flash=null; }
+  requestAnimationFrame(frame);
+}
+
+// ---------- input: buttons ----------
+const REPEAT={left:null,right:null,soft:null};
+function act(a){
+  if(state!=='play') return;
+  if(a==='left') move(-1);
+  else if(a==='right') move(1);
+  else if(a==='cw') rotate(1);
+  else if(a==='ccw') rotate(-1);
+  else if(a==='hard') hardDrop();
+  else if(a==='hold') doHold();
+  else if(a==='soft') stepDown(true);
+  paint();
+}
+document.querySelectorAll('.pad button').forEach(btn=>{
+  const a=btn.dataset.act;
+  const start=e=>{
+    e.preventDefault();
+    btn.classList.add('down');
+    act(a);
+    if(a==='left'||a==='right'){
+      clearTimeout(REPEAT[a]);
+      REPEAT[a]=setTimeout(function rep(){ act(a); REPEAT[a]=setTimeout(rep,55); },170);
+    }
+    if(a==='soft'){ softHeld=true; }
+  };
+  const end=e=>{
+    btn.classList.remove('down');
+    if(REPEAT[a]){ clearTimeout(REPEAT[a]); REPEAT[a]=null; }
+    if(a==='soft') softHeld=false;
+  };
+  btn.addEventListener('pointerdown',start);
+  btn.addEventListener('pointerup',end);
+  btn.addEventListener('pointercancel',end);
+  btn.addEventListener('pointerleave',end);
+  btn.addEventListener('contextmenu',e=>e.preventDefault());
+});
+
+// ---------- input: swipe on board ----------
+let tx=0,ty=0,tt=0,accX=0,accY=0,swiped=false,softSwipe=false;
+boardC.addEventListener('pointerdown',e=>{
+  if(state!=='play') return;
+  boardC.setPointerCapture(e.pointerId);
+  tx=e.clientX; ty=e.clientY; tt=performance.now(); accX=0; accY=0; swiped=false; softSwipe=false;
+});
+boardC.addEventListener('pointermove',e=>{
+  if(state!=='play'||!tt) return;
+  const dx=e.clientX-tx, dy=e.clientY-ty;
+  const step=Math.max(16,cell*0.85);
+  if(Math.abs(dx-accX)>=step && Math.abs(dx)>Math.abs(dy)*0.7){
+    const dir=dx>accX?1:-1;
+    move(dir); accX += dir*step; swiped=true; paint();
+  }
+  if(dy-accY>=step && Math.abs(dy)>Math.abs(dx)){
+    stepDown(true); accY+=step; swiped=true; softSwipe=true; paint();
+  }
+});
+boardC.addEventListener('pointerup',e=>{
+  if(state!=='play'){ tt=0; return; }
+  const dx=e.clientX-tx, dy=e.clientY-ty, dur=performance.now()-tt;
+  if(!swiped && Math.abs(dx)<12 && Math.abs(dy)<12 && dur<300){ rotate(1); }
+  else if(dy>cell*3 && dur<260 && Math.abs(dy)>Math.abs(dx)*2){ hardDrop(); }
+  tt=0; softSwipe=false; paint();
+});
+boardC.addEventListener('pointercancel',()=>{tt=0;});
+
+// ---------- keyboard (bonus) ----------
+window.addEventListener('keydown',e=>{
+  if(state!=='play'){ if(e.key==='Enter'||e.key===' ') startOrResume(); return; }
+  const k=e.key;
+  if(k==='ArrowLeft') act('left');
+  else if(k==='ArrowRight') act('right');
+  else if(k==='ArrowDown'){ softHeld=true; act('soft'); }
+  else if(k==='ArrowUp'||k==='x') act('cw');
+  else if(k==='z') act('ccw');
+  else if(k===' '){ e.preventDefault(); act('hard'); }
+  else if(k==='c'||k==='Shift') act('hold');
+  else if(k==='p') togglePause();
+});
+window.addEventListener('keyup',e=>{ if(e.key==='ArrowDown') softHeld=false; });
+
+// ---------- overlay / pause ----------
+function startOrResume(){
+  if(state==='play') return;
+  if(state==='pause'){ state='play'; $('overlay').classList.remove('on'); last=performance.now(); }
+  else reset();
+}
+function togglePause(){
+  if(state==='play'){
+    state='pause'; softHeld=false;
+    $('ovTitle').textContent='一時停止';
+    $('ovText').innerHTML='スワイプで移動、タップで回転。<br>下に長くスワイプで一気に落とす。';
+    $('ovBtn').textContent='つづける';
+    $('overlay').classList.add('on');
+  } else if(state==='pause'){ startOrResume(); }
+}
+$('ovBtn').addEventListener('click',startOrResume);
+$('pauseBtn').addEventListener('click',togglePause);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden && state==='play') togglePause(); });
+
+// ---------- boot ----------
+grid=emptyGrid();
+while(queue.length<5) queue.push(pull());
+$('overlay').classList.add('on');
+window.addEventListener('resize',()=>setTimeout(resize,60));
+window.addEventListener('orientationchange',()=>setTimeout(resize,250));
+if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>paint());
+setTimeout(()=>{resize();paintPreview();},0);
+requestAnimationFrame(t=>{last=t;frame(t);});
+})();
+</script>
+</body>
+</html>

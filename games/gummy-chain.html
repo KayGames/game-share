@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>グミチェイン</title>
+<meta name="description" content="同じ色のグミを4つつなげて消す落ち物パズル。連鎖で大量得点！">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F9C9D6; --ink:#3B2350; --board:#3B2350; --edge:#FFFFFF;
+  --panel:#FFE6EE; --muted:#7A5A8C; --accent:#FF4D6D; --accent-deep:#B8304D;
+  --red:#FF4D6D; --green:#2FCB77; --blue:#4DA3FF; --yellow:#FFC933;
+  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#241430;--ink:#FFE6EE;--board:#140A1E;--edge:#5A3C74;--panel:#34203F;--muted:#C7A9D6;}
+}
+:root[data-theme="dark"]{--bg:#241430;--ink:#FFE6EE;--board:#140A1E;--edge:#5A3C74;--panel:#34203F;--muted:#C7A9D6;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#app{height:100dvh;max-width:560px;margin:0 auto;display:grid;grid-template-rows:auto 1fr auto auto;gap:10px;
+  padding:calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 10px) calc(env(safe-area-inset-left) + 12px)}
+header{display:flex;align-items:center;gap:8px}
+header h1{font-family:var(--display);font-size:18px;font-weight:400;flex:1}
+.iconbtn{width:40px;height:40px;border:none;border-radius:12px;background:var(--panel);color:var(--ink);font-size:18px;cursor:pointer}
+main{display:grid;grid-template-columns:1fr 86px;gap:10px;min-height:0}
+#stage{position:relative;min-height:0;display:flex;align-items:center;justify-content:center}
+#board{display:block;border-radius:16px;background:var(--board);box-shadow:0 0 0 4px var(--edge),0 9px 0 4px rgba(59,35,80,.28)}
+aside{display:flex;flex-direction:column;gap:10px}
+.box{background:var(--panel);border-radius:14px;padding:8px 6px;text-align:center}
+.box h2{font-size:12px;font-weight:800;color:var(--muted)}
+.box .v{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums;line-height:1.3;word-break:break-all}
+.nextc{display:block;margin:4px auto 0}
+#pad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+#pad button{height:60px;border:none;border-radius:16px;background:var(--panel);color:var(--ink);font-size:24px;font-weight:800;
+  box-shadow:0 4px 0 rgba(59,35,80,.28);touch-action:none;cursor:pointer;font-family:var(--body)}
+#pad button.on{transform:translateY(3px);box-shadow:0 1px 0 rgba(59,35,80,.28)}
+.hint{display:none;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
+@media (hover:hover) and (pointer:fine){#pad{display:none}.hint{display:block}}
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;
+  background:rgba(59,35,80,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);z-index:10}
+.overlay.show{display:flex}
+.card{background:var(--panel);border-radius:24px;padding:26px 22px;max-width:340px;width:100%;text-align:center}
+.logo{display:flex;justify-content:center;gap:4px;margin-bottom:14px}
+.logo span{font-family:var(--display);font-size:26px;color:#fff;width:40px;height:40px;display:grid;place-items:center;
+  border-radius:13px;box-shadow:inset -3px -4px 0 rgba(0,0,0,.18),inset 3px 3px 0 rgba(255,255,255,.35)}
+.card h2{font-family:var(--display);font-weight:400;font-size:26px;margin-bottom:10px}
+.card p{font-size:14px;line-height:1.75;margin-bottom:14px;text-align:left}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;text-align:left;margin:0 auto 18px;width:max-content;max-width:100%}
+.card dt{font-weight:800}
+.stats{font-size:15px;line-height:1.9;margin-bottom:18px}
+.stats b{font-family:var(--display);font-weight:400;font-size:22px}
+.primary{font-family:var(--display);font-size:20px;background:var(--accent);color:#fff;border:none;border-radius:999px;
+  padding:13px 34px;box-shadow:0 5px 0 var(--accent-deep);cursor:pointer}
+.primary:active{transform:translateY(3px);box-shadow:0 2px 0 var(--accent-deep)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>グミチェイン</h1>
+    <button class="iconbtn" id="btnSound" aria-label="サウンド切替">🔊</button>
+    <button class="iconbtn" id="btnPause" aria-label="一時停止">⏸</button>
+  </header>
+  <main>
+    <div id="stage"><canvas id="board"></canvas></div>
+    <aside>
+      <div class="box"><h2>つぎ</h2><canvas class="nextc" id="next1"></canvas><canvas class="nextc" id="next2"></canvas></div>
+      <div class="box"><h2>スコア</h2><div class="v" id="vScore">0</div></div>
+      <div class="box"><h2>レベル</h2><div class="v" id="vLevel">1</div></div>
+      <div class="box"><h2>最大連鎖</h2><div class="v" id="vChain">0</div></div>
+    </aside>
+  </main>
+  <div id="pad">
+    <button data-act="left" aria-label="左へ">◀</button>
+    <button data-act="down" aria-label="下へ">▼</button>
+    <button data-act="right" aria-label="右へ">▶</button>
+    <button data-act="rotl" aria-label="左回転">↺</button>
+    <button data-act="rotr" aria-label="右回転">↻</button>
+  </div>
+  <div class="hint">← → 移動 ／ ↓ 加速 ／ Z・X 回転 ／ スペース 即落下 ／ P 一時停止</div>
+</div>
+
+<div class="overlay show" id="ovStart">
+  <div class="card">
+    <div class="logo" aria-hidden="true">
+      <span style="background:var(--red)">グ</span><span style="background:var(--green)">ミ</span><span style="background:var(--blue)">チ</span><span style="background:var(--yellow)">ェ</span><span style="background:var(--red)">イ</span><span style="background:var(--green)">ン</span>
+    </div>
+    <p>同じ色のグミを4つ以上つなげると消えます。消えたあとに落ちてきたグミがまたつながると連鎖。連鎖が続くほど点数が跳ね上がります。</p>
+    <dl>
+      <dt>スマホ</dt><dd>下のボタン、または盤面をスワイプで移動・タップで回転・下フリックで即落下</dd>
+      <dt>PC</dt><dd>← → ↓、Z・X、スペース</dd>
+    </dl>
+    <p style="text-align:center" id="bestStart"></p>
+    <button class="primary" id="btnStart">スタート</button>
+  </div>
+</div>
+<div class="overlay" id="ovPause">
+  <div class="card"><h2>一時停止中</h2><button class="primary" id="btnResume">つづける</button></div>
+</div>
+<div class="overlay" id="ovOver">
+  <div class="card">
+    <h2>ゲームオーバー</h2>
+    <div class="stats" id="overStats"></div>
+    <button class="primary" id="btnRetry">もう一度</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var COLS = 6, ROWS = 13; // row 0 is hidden
+var NCOL = 4;
+var PAL = [null,
+  {base:'#FF4D6D', light:'#FFA3B4', dark:'#B8304D'},
+  {base:'#2FCB77', light:'#94F2BF', dark:'#1B8A4F'},
+  {base:'#4DA3FF', light:'#B0D6FF', dark:'#2366B8'},
+  {base:'#FFC933', light:'#FFEAA6', dark:'#C28D00'}];
+var OFF = [[0,-1],[1,0],[0,1],[-1,0]];
+var CHAIN_POWER = [0,8,16,32,64,96,128,160,192,224,256,288,320,352,384,416,448,480,512];
+var GROUP_BONUS = [0,0,0,0,0,2,3,4,5,6,7,10];
+var COLOR_BONUS = [0,0,3,6,12];
+
+var $ = function(id){ return document.getElementById(id); };
+var boardCv = $('board'), ctx = boardCv.getContext('2d');
+var n1 = $('next1'), n2 = $('next2');
+var stage = $('stage');
+var dpr = Math.min(2, window.devicePixelRatio || 1);
+var cell = 30;
+
+var grid = [], squash = [], piece = null, queue = [];
+var state = 'title'; // title | fall | settle | pop | over
+var paused = false;
+var score = 0, best = 0, chain = 0, maxChain = 0, pieces = 0, level = 1;
+var fallers = [], popCells = [], popT = 0;
+var particles = [], floats = [];
+var lockT = 0, lockResets = 0, softDrop = false;
+var clock = 0;
+var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+try { best = parseInt(localStorage.getItem('gummychain-best') || '0', 10) || 0; } catch(e) { best = 0; }
+
+/* ---------- audio ---------- */
+var AC = null, master = null, soundOn = true;
+function initAudio(){
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = 0.45; master.connect(AC.destination);
+  } catch(e) { AC = null; }
+}
+function tone(f, d, type, v, f2, delay){
+  if (!AC || !soundOn) return;
+  var t = AC.currentTime + (delay || 0);
+  var o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(v, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + d + 0.03);
+}
+var sfx = {
+  move: function(){ tone(520, 0.04, 'square', 0.05); },
+  rot:  function(){ tone(700, 0.07, 'triangle', 0.12, 1050); },
+  land: function(){ tone(160, 0.12, 'sine', 0.35, 70); },
+  pop: function(c){
+    var b = 523.25 * Math.pow(2, (Math.min(c, 12) - 1) * 2 / 12);
+    tone(260, 0.14, 'sine', 0.3, 900);
+    tone(b, 0.16, 'triangle', 0.22, null, 0.03);
+    tone(b * 1.26, 0.18, 'triangle', 0.18, null, 0.09);
+    tone(b * 1.5, 0.26, 'sine', 0.16, null, 0.15);
+  },
+  clear: function(){ [0,4,7,12,16].forEach(function(s,i){ tone(659 * Math.pow(2, s/12), 0.22, 'triangle', 0.18, null, i * 0.07); }); },
+  over: function(){ [0,-3,-7,-12].forEach(function(s,i){ tone(392 * Math.pow(2, s/12), 0.3, 'triangle', 0.2, null, i * 0.16); }); }
+};
+
+/* ---------- grid helpers ---------- */
+function makeGrid(v){ var g = []; for (var y = 0; y < ROWS; y++){ var r = []; for (var x = 0; x < COLS; x++) r.push(v); g.push(r); } return g; }
+function rndPair(){ return [1 + Math.floor(Math.random() * NCOL), 1 + Math.floor(Math.random() * NCOL)]; }
+function free(x, y){ return x >= 0 && x < COLS && y < ROWS && (y < 0 || grid[y][x] === 0); }
+function canPlace(x, y, r){ var o = OFF[r]; return free(x, y) && free(x + o[0], y + o[1]); }
+function landed(){ return !canPlace(piece.x, piece.y + 1, piece.rot); }
+function gravity(){ return Math.min(1.1 + (level - 1) * 0.45, 14); }
+
+/* ---------- game flow ---------- */
+function newGame(){
+  grid = makeGrid(0); squash = makeGrid(-9);
+  // first two pairs use only 3 colors for a gentler start
+  queue = [];
+  for (var i = 0; i < 3; i++) queue.push(i < 2 ? [1 + Math.floor(Math.random()*3), 1 + Math.floor(Math.random()*3)] : rndPair());
+  score = 0; chain = 0; maxChain = 0; pieces = 0; level = 1;
+  fallers = []; popCells = []; particles = []; floats = [];
+  paused = false; softDrop = false;
+  hud();
+  spawn();
+}
+function spawn(){
+  var c = queue.shift(); queue.push(rndPair());
+  piece = {x:2, y:1, rot:0, frac:0, c:c, ang:0, tang:0};
+  lockT = 0; lockResets = 0;
+  pieces++; level = 1 + Math.floor(pieces / 20);
+  state = 'fall';
+  drawNext(); hud();
+}
+function resetLock(){ if (landed() && lockResets < 14){ lockT = 0; lockResets++; } }
+function tryMove(dx){
+  if (state !== 'fall' || paused) return;
+  if (canPlace(piece.x + dx, piece.y, piece.rot)){ piece.x += dx; sfx.move(); resetLock(); }
+}
+function tryRotate(dir){
+  if (state !== 'fall' || paused) return;
+  var nr = (piece.rot + dir + 4) % 4, o = OFF[nr];
+  var tries = [[0,0],[-o[0], -o[1]]];
+  for (var i = 0; i < tries.length; i++){
+    var nx = piece.x + tries[i][0], ny = piece.y + tries[i][1];
+    if (canPlace(nx, ny, nr)){ piece.x = nx; piece.y = ny; piece.rot = nr; piece.tang += dir * 90; if (tries[i][1] < 0) piece.frac = 0; sfx.rot(); resetLock(); return; }
+  }
+  // squeezed between walls: flip 180
+  var fr = (piece.rot + 2) % 4, fo = OFF[fr];
+  if (canPlace(piece.x, piece.y, fr) || canPlace(piece.x - fo[0], piece.y - fo[1], fr)){
+    if (!canPlace(piece.x, piece.y, fr)){ piece.x -= fo[0]; piece.y -= fo[1]; piece.frac = 0; }
+    piece.rot = fr; piece.tang += dir * 180; sfx.rot(); resetLock();
+  }
+}
+function hardDrop(){
+  if (state !== 'fall' || paused) return;
+  while (canPlace(piece.x, piece.y + 1, piece.rot)){ piece.y++; score += 2; }
+  lockPiece();
+}
+function lockPiece(){
+  var o = OFF[piece.rot];
+  var cells = [[piece.x, piece.y, piece.c[0]], [piece.x + o[0], piece.y + o[1], piece.c[1]]];
+  cells.forEach(function(p){ if (p[1] >= 0){ grid[p[1]][p[0]] = p[2]; squash[p[1]][p[0]] = clock; } });
+  piece = null;
+  sfx.land();
+  startSettle();
+}
+function startSettle(){
+  fallers = [];
+  for (var x = 0; x < COLS; x++){
+    var w = ROWS - 1;
+    for (var y = ROWS - 1; y >= 0; y--){
+      if (grid[y][x]){
+        if (y !== w){ fallers.push({x:x, c:grid[y][x], y:y, ty:w, v:4, done:false}); grid[y][x] = 0; }
+        w--;
+      }
+    }
+  }
+  if (fallers.length){ state = 'settle'; } else { afterSettle(); }
+}
+function findGroups(){
+  var seen = makeGrid(false), groups = [];
+  for (var y = 1; y < ROWS; y++) for (var x = 0; x < COLS; x++){
+    var c = grid[y][x];
+    if (!c || seen[y][x]) continue;
+    var stack = [[x,y]], g = []; seen[y][x] = true;
+    while (stack.length){
+      var p = stack.pop(); g.push(p);
+      for (var k = 0; k < 4; k++){
+        var nx = p[0] + OFF[k][0], ny = p[1] + OFF[k][1];
+        if (nx >= 0 && nx < COLS && ny >= 1 && ny < ROWS && !seen[ny][nx] && grid[ny][nx] === c){ seen[ny][nx] = true; stack.push([nx, ny]); }
+      }
+    }
+    if (g.length >= 4) groups.push({c:c, cells:g});
+  }
+  return groups;
+}
+function afterSettle(){
+  var groups = findGroups();
+  if (groups.length){
+    chain++; if (chain > maxChain) maxChain = chain;
+    var n = 0, cb = {}, gb = 0, colors = 0, sx = 0, sy = 0;
+    popCells = [];
+    groups.forEach(function(g){
+      n += g.cells.length;
+      gb += GROUP_BONUS[Math.min(g.cells.length, 11)];
+      if (!cb[g.c]){ cb[g.c] = 1; colors++; }
+      g.cells.forEach(function(p){ popCells.push({x:p[0], y:p[1], c:g.c}); sx += p[0]; sy += p[1]; });
+    });
+    var cp = CHAIN_POWER[Math.min(chain - 1, CHAIN_POWER.length - 1)];
+    var mult = Math.max(1, cp + gb + COLOR_BONUS[colors]);
+    var gain = 10 * n * mult;
+    score += gain;
+    floats.push({text: chain >= 2 ? chain + 'れんさ!' : '+' + gain, sub: chain >= 2 ? '+' + gain : '', x:(sx/popCells.length + 0.5), y:(sy/popCells.length + 0.5), t:0, big: chain >= 2});
+    popT = 0; state = 'pop';
+    sfx.pop(chain);
+    hud();
+    return;
+  }
+  // no more pops
+  if (chain > 0){
+    var empty = true;
+    for (var y = 0; y < ROWS && empty; y++) for (var x = 0; x < COLS; x++) if (grid[y][x]){ empty = false; break; }
+    if (empty){ score += 3000; floats.push({text:'ぜんけし!', sub:'+3000', x:3, y:6.5, t:0, big:true}); sfx.clear(); hud(); }
+  }
+  chain = 0;
+  if (grid[1][2] !== 0){ gameOver(); return; }
+  spawn();
+}
+function gameOver(){
+  state = 'over'; sfx.over();
+  var isBest = score > best;
+  if (isBest){ best = score; try { localStorage.setItem('gummychain-best', String(best)); } catch(e){} }
+  $('overStats').innerHTML = 'スコア<br><b>' + score.toLocaleString() + '</b><br>最大連鎖 ' + maxChain + '<br>' +
+    (isBest ? 'ベスト更新!' : 'ベスト ' + best.toLocaleString());
+  setTimeout(function(){ $('ovOver').classList.add('show'); $('btnRetry').focus(); }, 700);
+}
+function hud(){
+  $('vScore').textContent = score.toLocaleString();
+  $('vLevel').textContent = level;
+  $('vChain').textContent = maxChain;
+}
+
+/* ---------- update ---------- */
+function update(dt){
+  clock += dt;
+  if (state === 'fall'){
+    if (!landed()){
+      piece.frac += (softDrop ? 20 : gravity()) * dt;
+      while (piece.frac >= 1){
+        if (canPlace(piece.x, piece.y + 1, piece.rot)){ piece.y++; piece.frac -= 1; if (softDrop) score += 1; }
+        else { piece.frac = 0; break; }
+      }
+      lockT = 0;
+    } else {
+      piece.frac = 0;
+      lockT += dt;
+      if (lockT >= (softDrop ? 0.08 : 0.5)) lockPiece();
+    }
+  } else if (state === 'settle'){
+    var all = true;
+    fallers.forEach(function(f){
+      if (f.done) return;
+      f.v += 60 * dt; f.y += f.v * dt;
+      if (f.y >= f.ty){ f.y = f.ty; f.done = true; grid[f.ty][f.x] = f.c; squash[f.ty][f.x] = clock; }
+      else all = false;
+    });
+    if (all){ fallers = []; sfx.land(); afterSettle(); }
+  } else if (state === 'pop'){
+    popT += dt;
+    if (popT >= 0.55){
+      popCells.forEach(function(p){
+        grid[p.y][p.x] = 0;
+        var k = reduceMotion ? 3 : 9;
+        for (var i = 0; i < k; i++){
+          var a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5;
+          particles.push({x:p.x + 0.5, y:p.y + 0.5, vx:Math.cos(a) * s, vy:Math.sin(a) * s - 3, life:0.7 + Math.random() * 0.4, t:0, c:p.c, r:0.08 + Math.random() * 0.1});
+        }
+      });
+      popCells = [];
+      startSettle();
+    }
+  }
+  if (piece){ piece.ang += (piece.tang - piece.ang) * Math.min(1, dt * 22); }
+  particles = particles.filter(function(p){ p.t += dt; p.vy += 14 * dt; p.x += p.vx * dt; p.y += p.vy * dt; return p.t < p.life; });
+  floats = floats.filter(function(f){ f.t += dt; return f.t < 1.4; });
+  hud();
+}
+
+/* ---------- drawing ---------- */
+function rr(c, x, y, w, h, r){
+  c.beginPath(); c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function symbol(c, col, s){
+  c.beginPath();
+  if (col === 1){ c.arc(0, 0, s * 0.62, 0, Math.PI * 2); }
+  else if (col === 2){ c.moveTo(0, -s * 0.75); c.lineTo(s * 0.75, s * 0.55); c.lineTo(-s * 0.75, s * 0.55); c.closePath(); }
+  else if (col === 3){ c.moveTo(0, -s * 0.8); c.lineTo(s * 0.7, 0); c.lineTo(0, s * 0.8); c.lineTo(-s * 0.7, 0); c.closePath(); }
+  else { for (var i = 0; i < 10; i++){ var r = i % 2 ? s * 0.38 : s * 0.85, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); }
+  c.fill();
+}
+function drawBlob(c, cx, cy, s, col, sx, sy, alpha){
+  var P = PAL[col], h = s * 0.46;
+  c.save();
+  c.globalAlpha = alpha == null ? 1 : alpha;
+  c.translate(cx, cy + h * (1 - (sy || 1)));
+  c.scale(sx || 1, sy || 1);
+  var g = c.createRadialGradient(-h * 0.35, -h * 0.4, h * 0.1, 0, 0, h * 1.4);
+  g.addColorStop(0, P.light); g.addColorStop(0.55, P.base); g.addColorStop(1, P.dark);
+  rr(c, -h, -h, h * 2, h * 2, h * 0.62);
+  c.fillStyle = g; c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.55)';
+  c.beginPath(); c.ellipse(-h * 0.36, -h * 0.5, h * 0.36, h * 0.17, -0.45, 0, Math.PI * 2); c.fill();
+  c.translate(0, h * 0.1);
+  c.fillStyle = 'rgba(255,255,255,0.4)';
+  symbol(c, col, h * 0.36);
+  c.restore();
+}
+function squashScale(x, y){
+  var t = clock - squash[y][x];
+  if (t < 0 || t > 0.22) return [1, 1];
+  var k = Math.sin(t / 0.22 * Math.PI) * 0.16;
+  return [1 + k * 0.6, 1 - k];
+}
+function isPopping(x, y){ for (var i = 0; i < popCells.length; i++) if (popCells[i].x === x && popCells[i].y === y) return true; return false; }
+
+function render(){
+  var W = cell * COLS, H = cell * 12;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  rr(ctx, 0, 0, W, H, 16); ctx.clip();
+  ctx.translate(0, -cell); // row 1 at top
+
+  // background dots
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  for (var y = 1; y < ROWS; y++) for (var x = 0; x < COLS; x++){ ctx.beginPath(); ctx.arc((x + 0.5) * cell, (y + 0.5) * cell, cell * 0.06, 0, Math.PI * 2); ctx.fill(); }
+  // spawn danger mark
+  ctx.strokeStyle = 'rgba(255,77,109,0.45)'; ctx.lineWidth = Math.max(2, cell * 0.07); ctx.lineCap = 'round';
+  var mx = 2.5 * cell, my = 1.5 * cell, m = cell * 0.2;
+  ctx.beginPath(); ctx.moveTo(mx - m, my - m); ctx.lineTo(mx + m, my + m); ctx.moveTo(mx + m, my - m); ctx.lineTo(mx - m, my + m); ctx.stroke();
+
+  var blink = state === 'pop' && popT < 0.35 && Math.floor(popT * 18) % 2 === 1;
+  var shrink = state === 'pop' && popT >= 0.35 ? Math.max(0, 1 - (popT - 0.35) / 0.2) : 1;
+
+  // bridges between joined gummies
+  for (y = 0; y < ROWS; y++) for (x = 0; x < COLS; x++){
+    var c = grid[y][x]; if (!c) continue;
+    if (isPopping(x, y) && shrink < 1) continue;
+    ctx.fillStyle = PAL[c].base;
+    if (x + 1 < COLS && grid[y][x + 1] === c && !(isPopping(x + 1, y) && shrink < 1)) ctx.fillRect((x + 0.5) * cell, (y + 0.5 - 0.3) * cell, cell, cell * 0.6);
+    if (y + 1 < ROWS && grid[y + 1][x] === c && y >= 1 && !(isPopping(x, y + 1) && shrink < 1)) ctx.fillRect((x + 0.5 - 0.3) * cell, (y + 0.5) * cell, cell * 0.6, cell);
+  }
+  // grid gummies
+  for (y = 0; y < ROWS; y++) for (x = 0; x < COLS; x++){
+    c = grid[y][x]; if (!c) continue;
+    var popping = isPopping(x, y);
+    var sc = popping ? [shrink * (1 + (1 - shrink) * 0.3), shrink * (1 + (1 - shrink) * 0.3)] : squashScale(x, y);
+    drawBlob(ctx, (x + 0.5) * cell, (y + 0.5) * cell, cell, c, sc[0], sc[1], popping && blink ? 0.35 : 1);
+  }
+  // falling after pops
+  fallers.forEach(function(f){ if (!f.done) drawBlob(ctx, (f.x + 0.5) * cell, (f.y + 0.5) * cell, cell, f.c); });
+
+  // active piece + ghost
+  if (piece && state === 'fall'){
+    var gy = piece.y; while (canPlace(piece.x, gy + 1, piece.rot)) gy++;
+    var o = OFF[piece.rot];
+    ctx.lineWidth = Math.max(2, cell * 0.06);
+    [[piece.x, gy, piece.c[0]], [piece.x + o[0], gy + o[1], piece.c[1]]].forEach(function(p){
+      if (p[1] < 1) return;
+      ctx.strokeStyle = PAL[p[2]].base; ctx.globalAlpha = 0.55;
+      rr(ctx, (p[0] + 0.28) * cell, (p[1] + 0.28) * cell, cell * 0.44, cell * 0.44, cell * 0.14); ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+    var py = piece.y + (landed() ? 0 : piece.frac);
+    var cx = (piece.x + 0.5) * cell, cy = (py + 0.5) * cell;
+    var a = piece.ang * Math.PI / 180;
+    var pulse = 1 + Math.sin(clock * 10) * 0.03;
+    drawBlob(ctx, cx + Math.sin(a) * cell, cy - Math.cos(a) * cell, cell, piece.c[1]);
+    drawBlob(ctx, cx, cy, cell, piece.c[0], pulse, pulse);
+    // pivot marker ring
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = Math.max(1.5, cell * 0.05);
+    rr(ctx, cx - cell * 0.49, cy - cell * 0.49, cell * 0.98, cell * 0.98, cell * 0.3); ctx.stroke();
+  }
+
+  // particles
+  particles.forEach(function(p){
+    ctx.globalAlpha = Math.max(0, 1 - p.t / p.life);
+    ctx.fillStyle = PAL[p.c].light;
+    ctx.beginPath(); ctx.arc(p.x * cell, p.y * cell, p.r * cell, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // floating texts
+  floats.forEach(function(f){
+    var k = Math.min(1, f.t / 0.15), fade = f.t > 1.0 ? 1 - (f.t - 1.0) / 0.4 : 1;
+    var size = cell * (f.big ? 0.95 : 0.6) * (0.6 + 0.4 * k);
+    var fx = Math.min(Math.max(f.x * cell, cell * 1.8), W - cell * 1.8), fy = (f.y - f.t * 0.6) * cell;
+    ctx.globalAlpha = Math.max(0, fade);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = size + 'px "Dela Gothic One", "Hiragino Sans", sans-serif';
+    ctx.lineWidth = size * 0.22; ctx.strokeStyle = '#FFFFFF'; ctx.lineJoin = 'round';
+    ctx.strokeText(f.text, fx, fy); ctx.fillStyle = '#FF4D6D'; ctx.fillText(f.text, fx, fy);
+    if (f.sub){
+      var s2 = size * 0.5;
+      ctx.font = s2 + 'px "Dela Gothic One", sans-serif'; ctx.lineWidth = s2 * 0.25;
+      ctx.strokeText(f.sub, fx, fy + size * 0.85); ctx.fillStyle = '#3B2350'; ctx.fillText(f.sub, fx, fy + size * 0.85);
+    }
+    ctx.globalAlpha = 1;
+  });
+  ctx.restore();
+}
+function drawNext(){
+  [[n1, queue[0], 1], [n2, queue[1], 0.72]].forEach(function(n){
+    var cv = n[0], c = cv.getContext('2d'), w = cv._w, h = cv._h;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+    if (!n[1]) return;
+    var s = Math.min(w, h / 2) * n[2];
+    drawBlob(c, w / 2, h / 2 - s / 2, s, n[1][1]);
+    drawBlob(c, w / 2, h / 2 + s / 2, s, n[1][0]);
+  });
+}
+
+/* ---------- layout ---------- */
+function resize(){
+  var r = stage.getBoundingClientRect();
+  cell = Math.max(12, Math.floor(Math.min(r.width / COLS, (r.height - 12) / 12)));
+  boardCv.style.width = cell * COLS + 'px'; boardCv.style.height = cell * 12 + 'px';
+  boardCv.width = cell * COLS * dpr; boardCv.height = cell * 12 * dpr;
+  var nw = Math.min(64, n1.parentNode.clientWidth - 12);
+  [[n1, nw, nw * 1.6], [n2, nw, nw * 1.2]].forEach(function(n){
+    var cv = n[0]; cv._w = n[1]; cv._h = n[2];
+    cv.style.width = n[1] + 'px'; cv.style.height = n[2] + 'px';
+    cv.width = n[1] * dpr; cv.height = n[2] * dpr;
+  });
+  drawNext();
+}
+window.addEventListener('resize', resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+
+/* ---------- loop ---------- */
+var last = performance.now();
+function loop(now){
+  var dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state !== 'title' && !paused) update(dt);
+  if (state !== 'title') render();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- controls ---------- */
+function setPause(p){
+  if (state === 'title' || state === 'over') return;
+  paused = p; softDrop = false;
+  $('ovPause').classList.toggle('show', p);
+  if (p) $('btnResume').focus();
+}
+document.addEventListener('keydown', function(e){
+  var k = e.key;
+  if (state === 'title' || state === 'over') return;
+  if (k === 'p' || k === 'P' || k === 'Escape'){ setPause(!paused); e.preventDefault(); return; }
+  if (paused) return;
+  if (k === 'ArrowLeft'){ tryMove(-1); e.preventDefault(); }
+  else if (k === 'ArrowRight'){ tryMove(1); e.preventDefault(); }
+  else if (k === 'ArrowDown'){ softDrop = true; e.preventDefault(); }
+  else if (!e.repeat && (k === 'ArrowUp' || k === 'x' || k === 'X')){ tryRotate(1); e.preventDefault(); }
+  else if (!e.repeat && (k === 'z' || k === 'Z')){ tryRotate(-1); e.preventDefault(); }
+  else if (!e.repeat && k === ' '){ hardDrop(); e.preventDefault(); }
+});
+document.addEventListener('keyup', function(e){ if (e.key === 'ArrowDown') softDrop = false; });
+
+// pad buttons with hold-to-repeat
+Array.prototype.forEach.call(document.querySelectorAll('#pad button'), function(b){
+  var act = b.getAttribute('data-act'), t1 = null, t2 = null;
+  function stop(){ b.classList.remove('on'); clearTimeout(t1); clearInterval(t2); if (act === 'down') softDrop = false; }
+  b.addEventListener('pointerdown', function(e){
+    e.preventDefault(); initAudio(); b.classList.add('on');
+    try { b.setPointerCapture(e.pointerId); } catch(err){}
+    if (act === 'left' || act === 'right'){
+      var d = act === 'left' ? -1 : 1; tryMove(d);
+      t1 = setTimeout(function(){ t2 = setInterval(function(){ tryMove(d); }, 55); }, 170);
+    } else if (act === 'down'){ softDrop = true; }
+    else if (act === 'rotl'){ tryRotate(-1); }
+    else if (act === 'rotr'){ tryRotate(1); }
+  });
+  b.addEventListener('pointerup', stop);
+  b.addEventListener('pointercancel', stop);
+  b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+});
+
+// swipe / tap on the board
+var sw = null;
+stage.addEventListener('pointerdown', function(e){
+  if (state !== 'fall' || paused) { sw = null; return; }
+  initAudio();
+  sw = {x:e.clientX, y:e.clientY, ax:e.clientX, t:performance.now(), moved:false, id:e.pointerId};
+  try { stage.setPointerCapture(e.pointerId); } catch(err){}
+});
+stage.addEventListener('pointermove', function(e){
+  if (!sw || e.pointerId !== sw.id) return;
+  var step = cell * 0.85;
+  while (e.clientX - sw.ax > step){ tryMove(1); sw.ax += step; sw.moved = true; }
+  while (sw.ax - e.clientX > step){ tryMove(-1); sw.ax -= step; sw.moved = true; }
+  var dy = e.clientY - sw.y;
+  if (dy > cell * 1.1 && Math.abs(e.clientX - sw.x) < cell * 1.2){ softDrop = true; sw.moved = true; }
+});
+function swEnd(e){
+  if (!sw || e.pointerId !== sw.id) return;
+  var dt = performance.now() - sw.t, dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+  if (dy > cell * 2.2 && dt < 260 && Math.abs(dx) < dy * 0.6){ hardDrop(); }
+  else if (!sw.moved && Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 300){
+    var r = boardCv.getBoundingClientRect();
+    tryRotate(e.clientX < r.left + r.width / 2 ? -1 : 1);
+  }
+  softDrop = false; sw = null;
+}
+stage.addEventListener('pointerup', swEnd);
+stage.addEventListener('pointercancel', function(){ softDrop = false; sw = null; });
+
+$('btnPause').addEventListener('click', function(){ setPause(!paused); });
+$('btnResume').addEventListener('click', function(){ setPause(false); });
+$('btnSound').addEventListener('click', function(){
+  soundOn = !soundOn; this.textContent = soundOn ? '🔊' : '🔇'; initAudio();
+});
+document.addEventListener('visibilitychange', function(){ if (document.hidden && state !== 'title' && state !== 'over') setPause(true); });
+
+function start(){
+  initAudio();
+  $('ovStart').classList.remove('show'); $('ovOver').classList.remove('show');
+  newGame();
+}
+$('btnStart').addEventListener('click', start);
+$('btnRetry').addEventListener('click', start);
+if (best > 0) $('bestStart').textContent = 'ベスト ' + best.toLocaleString();
+
+resize();
+grid = makeGrid(0); squash = makeGrid(-9);
+requestAnimationFrame(loop);
+$('btnStart').focus();
+})();
+</script>
+</body>
+</html>
