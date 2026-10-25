@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10秒連打チャレンジ</title>
+<meta name="author" content="サンプル">
+<meta name="description" content="10秒間で何回クリックできるか挑戦！HTML 1枚だけのゲームの見本です。">
+<style>
+  body { margin: 0; height: 100vh; display: grid; place-items: center; background: #101225; color: #fff;
+         font-family: system-ui, sans-serif; text-align: center; user-select: none; }
+  #btn { width: 220px; height: 220px; border-radius: 50%; border: 0; font-size: 28px; font-weight: 800;
+         background: #ffcc33; color: #101225; cursor: pointer; box-shadow: 0 8px 0 #b38900; }
+  #btn:active { transform: translateY(6px); box-shadow: 0 2px 0 #b38900; }
+  .big { font-size: 48px; font-weight: 800; margin: 16px 0; }
+  a { color: #6ee7ff; }
+</style>
+</head>
+<body>
+<div>
+  <div id="time" class="big">10.0</div>
+  <button id="btn">スタート</button>
+  <div id="score" class="big">0 回</div>
+  <div>ベスト: <span id="best">0</span> 回</div>
+  <p><a href="../">← 一覧にもどる</a></p>
+</div>
+<script>
+  let count = 0, end = 0, running = false;
+  let best = 0;
+  try { best = +localStorage.getItem("click-race-best") || 0; } catch {}
+  const best_el = document.getElementById("best"); best_el.textContent = best;
+  const btn = document.getElementById("btn");
+  btn.onclick = () => {
+    if (!running && Date.now() < end + 1000) return; // 終了直後の誤タップ防止
+    if (!running) { running = true; count = 0; end = Date.now() + 10000; btn.textContent = "連打！"; tick(); }
+    else count++;
+    document.getElementById("score").textContent = count + " 回";
+  };
+  function tick() {
+    const left = Math.max(0, end - Date.now());
+    document.getElementById("time").textContent = (left / 1000).toFixed(1);
+    if (left > 0) return requestAnimationFrame(tick);
+    running = false; btn.textContent = "もう一回";
+    if (count > best) { best = count; best_el.textContent = best; try { localStorage.setItem("click-race-best", best); } catch {} }
+  }
+</script>
+</body>
+</html>

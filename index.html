@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>なかまゲーム置き場</title>
+<style>
+  :root {
+    --bg: #0f1020; --panel: #1a1c33; --panel-2: #23264a; --text: #eef0ff;
+    --muted: #9aa0c8; --accent: #ffcc33; --accent-2: #6ee7ff; --border: #2f3363;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 40px 16px 24px; text-align: center;
+    background: radial-gradient(ellipse at top, #2a2f6b 0%, transparent 70%);
+  }
+  h1 { margin: 0; font-size: clamp(28px, 6vw, 44px); letter-spacing: .04em; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); margin-top: 8px; }
+  .toolbar {
+    max-width: 1100px; margin: 0 auto; padding: 0 16px 16px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .toolbar input, .toolbar select {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; font-size: 15px;
+  }
+  .toolbar input { flex: 1 1 240px; min-width: 0; }
+  .toolbar input:focus, .toolbar select:focus { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+  .count { max-width: 1100px; margin: 0 auto; padding: 0 16px 8px; color: var(--muted); font-size: 14px; }
+  main {
+    max-width: 1100px; margin: 0 auto; padding: 0 16px 48px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; display: flex; flex-direction: column;
+    text-decoration: none; color: inherit; transition: transform .12s, border-color .12s;
+  }
+  .card:hover, .card:focus-visible { transform: translateY(-3px); border-color: var(--accent); outline: none; }
+  .thumb {
+    aspect-ratio: 16 / 9; background: var(--panel-2); display: grid; place-items: center;
+    font-size: 44px; font-weight: 800; color: var(--accent-2);
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .title { font-weight: 700; font-size: 17px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .desc { font-size: 14px; color: #cfd3f5; line-height: 1.5; flex: 1; }
+  .tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tag { font-size: 12px; background: var(--panel-2); color: var(--accent-2); padding: 2px 8px; border-radius: 99px; }
+  .new { color: var(--bg); background: var(--accent); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: 2px; }
+  .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 48px 0; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 0 16px 32px; }
+  footer a { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 なかま<span>ゲーム</span>置き場</h1>
+  <div class="sub">みんなが作ったHTMLゲームで遊ぼう</div>
+</header>
+
+<div class="toolbar">
+  <input id="q" type="search" placeholder="タイトル・作者・タグで検索" aria-label="検索">
+  <select id="sort" aria-label="並び順">
+    <option value="added">新しい順</option>
+    <option value="updated">更新順</option>
+    <option value="title">タイトル順</option>
+    <option value="author">作者順</option>
+  </select>
+</div>
+<div class="count" id="count"></div>
+<main id="list"><div class="empty">読み込み中…</div></main>
+<footer>ゲームの追加方法は <a id="repo-link" href="#">README</a> を見てね</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const WEEK = 7 * 24 * 60 * 60 * 1000;
+let games = [];
+
+// GitHub Pages の URL (user.github.io/repo/) からリポジトリへのリンクを作る
+(() => {
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
+  const repo = location.pathname.split("/").filter(Boolean)[0];
+  if (m && repo) $("repo-link").href = `https://github.com/${m[1]}/${repo}#readme`;
+})();
+
+function render() {
+  const q = $("q").value.trim().toLowerCase();
+  const sort = $("sort").value;
+  let list = games.filter((g) =>
+    !q || [g.title, g.author, g.description, ...(g.tags || [])].join(" ").toLowerCase().includes(q));
+  list.sort((a, b) =>
+    sort === "title" || sort === "author" ? a[sort].localeCompare(b[sort], "ja") : b[sort].localeCompare(a[sort]));
+
+  $("count").textContent = `${list.length} 本のゲーム`;
+  if (!list.length) {
+    $("list").innerHTML = `<div class="empty">${games.length ? "見つかりませんでした" : "まだゲームがありません。最初の1本を追加しよう！"}</div>`;
+    return;
+  }
+  $("list").innerHTML = list.map((g) => {
+    const isNew = Date.now() - new Date(g.added).getTime() < WEEK;
+    const thumb = g.thumbnail
+      ? `<img src="${esc(g.thumbnail)}" alt="" loading="lazy">`
+      : esc([...g.title][0] || "?");
+    return `<a class="card" href="${esc(g.url)}" target="_blank" rel="noopener">
+      <div class="thumb">${thumb}</div>
+      <div class="body">
+        <div class="title">${esc(g.title)}${isNew ? '<span class="new">NEW</span>' : ""}</div>
+        <div class="meta">by ${esc(g.author)} ・ ${new Date(g.updated).toLocaleDateString("ja-JP")}</div>
+        ${g.description ? `<div class="desc">${esc(g.description)}</div>` : '<div class="desc"></div>'}
+        ${g.tags?.length ? `<div class="tags">${g.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
+      </div>
+    </a>`;
+  }).join("");
+}
+
+fetch("games.json", { cache: "no-store" })
+  .then((r) => r.json())
+  .then((data) => { games = data.games || []; render(); })
+  .catch(() => { $("list").innerHTML = '<div class="empty">games.json を読み込めませんでした</div>'; });
+
+$("q").addEventListener("input", render);
+$("sort").addEventListener("change", render);
+</script>
+</body>
+</html>
