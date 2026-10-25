@@ -1,0 +1,351 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>試験管カラーソート</title>
+<meta name="description" content="試験管の液体を注ぎ分けて、色をそろえるパズル。レベルが上がるほど色が増える。">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<style>
+/* Layout: one-screen lab bench — level strip on top, tube racks on shelves in the middle, tool tray at the bottom */
+:root{
+  --bg:#e7efed; --grid:rgba(14,133,119,.07); --surface:#ffffff; --ink:#13232a; --muted:#587078;
+  --accent:#0e8577; --accent-ink:#ffffff; --line:#c3d3cf;
+  --glass:rgba(255,255,255,.62); --glass-edge:rgba(19,48,54,.32); --shine:rgba(255,255,255,.75);
+  --shelf:#b6c8c3; --shelf-edge:#9db3ad; --shadow:rgba(19,48,54,.16); --cork:#b9895a; --cork-dark:#8d6338;
+  --f-display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1519; --grid:rgba(60,201,184,.06); --surface:#15242b; --ink:#e6f0f1; --muted:#8ea6ad;
+  --accent:#3cc9b8; --accent-ink:#06241f; --line:#25383f;
+  --glass:rgba(200,235,240,.07); --glass-edge:rgba(190,225,230,.38); --shine:rgba(255,255,255,.22);
+  --shelf:#22353c; --shelf-edge:#2e464e; --shadow:rgba(0,0,0,.45); --cork:#a87c50; --cork-dark:#7a5631;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1519; --grid:rgba(60,201,184,.06); --surface:#15242b; --ink:#e6f0f1; --muted:#8ea6ad;
+  --accent:#3cc9b8; --accent-ink:#06241f; --line:#25383f;
+  --glass:rgba(200,235,240,.07); --glass-edge:rgba(190,225,230,.38); --shine:rgba(255,255,255,.22);
+  --shelf:#22353c; --shelf-edge:#2e464e; --shadow:rgba(0,0,0,.45); --cork:#a87c50; --cork-dark:#7a5631;
+  color-scheme:dark}
+
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--f-body);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  display:flex; flex-direction:column; overflow:hidden; user-select:none; -webkit-user-select:none;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); padding-block:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.top{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding-block:14px 6px; max-width:720px; width:100%; margin-inline:auto}
+.lv{display:flex; flex-direction:column; line-height:1}
+.label{font-size:11px; font-weight:800; letter-spacing:.14em; color:var(--muted)}
+.lv b{font-family:var(--f-display); font-weight:400; font-size:clamp(34px,8vw,46px); color:var(--accent); font-variant-numeric:tabular-nums}
+.name{font-family:var(--f-display); font-size:clamp(14px,3.6vw,18px); text-align:center; flex:1; min-width:0; padding-bottom:6px; text-wrap:balance}
+.moves{display:flex; flex-direction:column; align-items:flex-end; line-height:1}
+.moves b{font-family:var(--f-display); font-weight:400; font-size:clamp(24px,6vw,30px); font-variant-numeric:tabular-nums}
+
+.stage{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:clamp(26px,5vh,46px); padding-block:16px}
+.row{position:relative; display:flex; justify-content:center; align-items:flex-end; gap:var(--gap); padding:0 10px}
+.row::after{content:""; position:absolute; left:0; right:0; bottom:-12px; height:12px; border-radius:3px;
+  background:var(--shelf); box-shadow:inset 0 -3px 0 var(--shelf-edge), 0 6px 14px var(--shadow)}
+
+.tube{position:relative; width:var(--tw); height:calc(var(--sh)*4 + var(--tw)*.62 + 6px); cursor:pointer; border-radius:0 0 999px 999px;
+  transition:transform .2s cubic-bezier(.3,1.4,.5,1); outline:none; flex:none}
+.tube::before{ /* rim */
+  content:""; position:absolute; top:0; left:-5px; right:-5px; height:7px; border-radius:4px;
+  border:2px solid var(--glass-edge); background:var(--glass); z-index:2}
+.glass{position:absolute; top:5px; left:0; right:0; bottom:0; border:2px solid var(--glass-edge); border-top:none;
+  border-radius:0 0 calc(var(--tw)/2) calc(var(--tw)/2); background:var(--glass); overflow:hidden;
+  display:flex; flex-direction:column-reverse; padding:0 3px 3px}
+.glass::before{ /* glass shine */
+  content:""; position:absolute; top:6px; bottom:14px; left:22%; width:12%; border-radius:9px; background:var(--shine); z-index:1; pointer-events:none}
+.glass::after{ /* measuring ticks */
+  content:""; position:absolute; right:3px; bottom:3px; width:24%; height:calc(var(--sh)*4);
+  background:repeating-linear-gradient(to top,transparent 0 calc(var(--sh) - 2px),var(--glass-edge) calc(var(--sh) - 2px) var(--sh));
+  opacity:.55; z-index:1; pointer-events:none}
+.seg{flex:none; height:var(--sh); position:relative}
+.seg:first-child{border-radius:0 0 calc(var(--tw)/2 - 4px) calc(var(--tw)/2 - 4px)}
+.seg.top::after{content:""; position:absolute; left:0; right:0; top:0; height:4px; background:rgba(255,255,255,.35)}
+.tube.sel{transform:translateY(-22px)}
+.tube:focus-visible .glass{box-shadow:0 0 0 3px var(--accent)}
+.tube.hint .glass{animation:hint .9s ease-in-out 2}
+@keyframes hint{50%{box-shadow:0 0 0 4px var(--accent)}}
+.tube.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.cork{position:absolute; left:8%; right:8%; top:-10px; height:16px; border-radius:4px 4px 2px 2px; z-index:3;
+  background:linear-gradient(var(--cork),var(--cork-dark)); transform:translateY(-14px); opacity:0; transition:.25s cubic-bezier(.3,1.6,.5,1)}
+.tube.done .cork{transform:none; opacity:1}
+
+.stream{position:fixed; width:6px; border-radius:3px; transform-origin:top; transform:scaleY(0); transition:transform .14s linear; z-index:4; pointer-events:none}
+.stream.on{transform:scaleY(1)}
+
+.tray{display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding-block:10px max(16px,env(safe-area-inset-bottom,0px)); max-width:720px; width:100%; margin-inline:auto}
+.btn{font:inherit; font-weight:800; font-size:14px; color:var(--ink); background:var(--surface); border:2px solid var(--line);
+  border-radius:14px; padding:10px 14px; min-width:76px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px;
+  box-shadow:0 3px 0 var(--line); transition:transform .08s, box-shadow .08s}
+.btn small{font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.06em}
+.btn:active{transform:translateY(3px); box-shadow:none}
+.btn:disabled{opacity:.4; cursor:default; transform:none; box-shadow:0 3px 0 var(--line)}
+.btn:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); box-shadow:0 3px 0 var(--shelf-edge)}
+
+.toast{position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,10px); opacity:0;
+  background:var(--ink); color:var(--bg); padding:9px 16px; border-radius:999px; font-weight:700; font-size:13px; transition:.2s; pointer-events:none; z-index:20; max-width:calc(100vw - 32px); text-align:center}
+.toast.on{opacity:1; transform:translate(-50%,0)}
+
+.win{position:fixed; inset:0; display:grid; place-items:center; background:rgba(8,20,24,.45); z-index:30; padding:16px}
+.card{background:var(--surface); border-radius:24px; padding:28px 26px 22px; text-align:center; width:min(340px,100%); box-shadow:0 20px 50px var(--shadow);
+  animation:pop .35s cubic-bezier(.3,1.5,.5,1)}
+@keyframes pop{from{transform:scale(.8); opacity:0}}
+.card h2{font-family:var(--f-display); font-weight:400; font-size:34px; margin:0 0 4px; color:var(--accent)}
+.card p{margin:0 0 18px; color:var(--muted); font-weight:700}
+.card .btn{width:100%; font-size:16px; padding:14px}
+.dots{display:flex; justify-content:center; gap:6px; margin-bottom:14px}
+.dots i{width:14px; height:22px; border-radius:0 0 7px 7px; display:block}
+
+@media (prefers-reduced-motion: reduce){ .tube,.cork,.stream,.toast{transition:none} .card{animation:none} }
+</style>
+
+<header class="top">
+  <div class="lv"><span class="label">LEVEL</span><b id="lvl">1</b></div>
+  <div class="name">試験管カラーソート</div>
+  <div class="moves"><span class="label">手数</span><b id="mv">0</b></div>
+</header>
+<main class="stage" id="stage" aria-label="試験管ラック"></main>
+<nav class="tray">
+  <button class="btn" id="bUndo" type="button">戻す<small>UNDO</small></button>
+  <button class="btn" id="bReset" type="button">やり直し<small>RESET</small></button>
+  <button class="btn" id="bHint" type="button">ヒント<small>HINT</small></button>
+  <button class="btn primary" id="bAdd" type="button">試験管＋1<small id="addNote">1回まで</small></button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+<div class="win" id="win" hidden>
+  <div class="card">
+    <div class="dots" id="dots"></div>
+    <h2>クリア！</h2>
+    <p id="winText"></p>
+    <button class="btn primary" id="bNext" type="button">次のレベルへ</button>
+  </div>
+</div>
+
+<script>
+(function(){
+const CAP = 4;
+const COLORS = ["#e5484d","#f28c28","#f5cf2a","#86c240","#159a57","#13b5a5","#3bb7f5","#2c5be0","#8b5cf6","#e94aa1","#8a5a3b","#a4adb6"];
+const $ = id => document.getElementById(id);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let S = null;          // {level, tubes, init, history, moves, added}
+let sel = -1, busy = false, tubeEls = [];
+
+/* ---------- puzzle logic ---------- */
+const top = t => t[t.length-1];
+function runLen(t){ let n=0; for(let i=t.length-1;i>=0 && t[i]===top(t);i--) n++; return n; }
+function canPour(T,a,b){
+  if(a===b) return false; const A=T[a], B=T[b];
+  if(!A.length || B.length>=CAP) return false;
+  return !B.length || top(B)===top(A);
+}
+function pourAmt(T,a,b){ return Math.min(runLen(T[a]), CAP - T[b].length); }
+function apply(T,a,b){
+  const N=T.map(t=>t.slice()); const n=pourAmt(N,a,b);
+  for(let i=0;i<n;i++) N[b].push(N[a].pop()); return N;
+}
+const solvedTube = t => !t.length || (t.length===CAP && t.every(c=>c===t[0]));
+const isWon = T => T.every(solvedTube);
+const key = T => T.map(t=>String.fromCharCode(...t.map(c=>97+c))).sort().join("|");
+
+function solve(start, limit=120000){
+  const seen=new Set(); let nodes=0;
+  function rec(T){
+    if(isWon(T)) return [];
+    if(++nodes>limit) return null;
+    const k=key(T); if(seen.has(k)) return null; seen.add(k);
+    const moves=[];
+    for(let a=0;a<T.length;a++){
+      const A=T[a]; if(!A.length || solvedTube(A)) continue;
+      const uniform = A.every(c=>c===A[0]);
+      let triedEmpty=false;
+      for(let b=0;b<T.length;b++){
+        if(!canPour(T,a,b)) continue;
+        if(!T[b].length){ if(uniform || triedEmpty) continue; triedEmpty=true; moves.push([a,b,1]); }
+        else moves.push([a,b,0]);
+      }
+    }
+    moves.sort((x,y)=>x[2]-y[2]);
+    for(const [a,b] of moves){ const r=rec(apply(T,a,b)); if(r) return [[a,b],...r]; }
+    return null;
+  }
+  return rec(start);
+}
+
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+function generate(level){
+  const k = Math.min(COLORS.length, level+2);
+  let best=null;
+  for(let tries=0;tries<40;tries++){
+    const pool=[]; for(let c=0;c<k;c++) for(let i=0;i<CAP;i++) pool.push(c);
+    shuffle(pool);
+    const T=[]; for(let i=0;i<k;i++) T.push(pool.slice(i*CAP,i*CAP+CAP));
+    T.push([],[]);
+    if(T.some(t=>t.length && solvedTube(t))) continue;
+    best=T;
+    if(solve(T)) return T;
+  }
+  return best;
+}
+
+/* ---------- storage ---------- */
+function loadLevel(){ try{ return Math.max(1, parseInt(localStorage.getItem("tubesort-level"))||1); }catch(e){ return 1; } }
+function saveLevel(l){ try{ localStorage.setItem("tubesort-level", String(l)); }catch(e){} }
+
+/* ---------- rendering ---------- */
+function layout(){
+  const n=S.tubes.length, rows = n>7 ? 2 : 1, per=Math.ceil(n/rows);
+  const stage=$("stage"), w=stage.clientWidth - 20, h=stage.clientHeight - 32;
+  const gap = Math.max(8, Math.min(18, w/per*0.22));
+  let tw = Math.min(58, (w - gap*(per-1))/per);
+  const rowGap = Math.max(26, Math.min(46, innerHeight*.05));
+  // fit height: tube height ≈ 4*0.8tw + 0.62tw + 6 + 22 lift
+  const maxH = (h - rowGap*(rows-1))/rows - 30;
+  tw = Math.max(26, Math.min(tw, (maxH-6)/(3.2+0.62)));
+  const r=document.documentElement.style;
+  r.setProperty("--tw", tw+"px"); r.setProperty("--sh", (tw*.8)+"px"); r.setProperty("--gap", gap+"px");
+  return {rows, per};
+}
+function build(){
+  const stage=$("stage"); stage.innerHTML=""; tubeEls=[];
+  const {rows, per} = layout();
+  for(let r=0;r<rows;r++){
+    const row=document.createElement("div"); row.className="row";
+    for(let i=r*per;i<Math.min(S.tubes.length,(r+1)*per);i++){
+      const el=document.createElement("div"); el.className="tube"; el.tabIndex=0; el.setAttribute("role","button");
+      el.setAttribute("aria-label","試験管 "+(i+1));
+      el.innerHTML='<div class="cork"></div><div class="glass"></div>';
+      el.addEventListener("click",()=>tap(i));
+      el.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tap(i);} });
+      row.appendChild(el); tubeEls[i]=el;
+    }
+    stage.appendChild(row);
+  }
+  paint();
+}
+function fill(i){
+  const t=S.tubes[i], g=tubeEls[i].querySelector(".glass");
+  g.innerHTML = t.map((c,j)=>`<div class="seg${j===t.length-1?" top":""}" style="background:${COLORS[c]}"></div>`).join("");
+  tubeEls[i].classList.toggle("done", t.length===CAP && solvedTube(t));
+}
+function paint(){
+  S.tubes.forEach((_,i)=>fill(i));
+  tubeEls.forEach((el,i)=>el.classList.toggle("sel", i===sel));
+  $("lvl").textContent=S.level; $("mv").textContent=S.moves;
+  $("bUndo").disabled=!S.history.length || busy;
+  $("bAdd").disabled=S.added; $("addNote").textContent=S.added?"使用済み":"1回まで";
+}
+
+let toastT;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("on"),1800); }
+
+/* ---------- interaction ---------- */
+function tap(i){
+  if(busy) return;
+  if(sel<0){
+    if(!S.tubes[i].length || (S.tubes[i].length===CAP && solvedTube(S.tubes[i]))) { shake(i); return; }
+    sel=i; paint(); return;
+  }
+  if(sel===i){ sel=-1; paint(); return; }
+  if(!canPour(S.tubes,sel,i)){
+    // switch selection if the tapped tube has liquid, otherwise shake
+    if(S.tubes[i].length && !(S.tubes[i].length===CAP && solvedTube(S.tubes[i]))){ sel=i; paint(); }
+    else { shake(i); }
+    return;
+  }
+  pour(sel,i);
+}
+function shake(i){ const el=tubeEls[i]; el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+async function pour(a,b){
+  busy=true;
+  const color=COLORS[top(S.tubes[a])];
+  const next=apply(S.tubes,a,b);
+  const src=tubeEls[a], dst=tubeEls[b];
+  if(!reduce){
+    const sr=src.getBoundingClientRect(), dr=dst.getBoundingClientRect();
+    const H=sr.height, sx=sr.left+sr.width/2, sy=sr.top+sr.height/2;
+    const tx=dr.left+dr.width/2, ty=dr.top-6;
+    const dir = tx>=sx ? 1 : -1, ang=dir*72*Math.PI/180;
+    const dx = tx - sx - (H/2)*Math.sin(ang) - dir*4;
+    const dy = ty - sy + (H/2)*Math.cos(ang);
+    src.style.zIndex=5; src.style.transition="transform .28s ease-in-out";
+    src.style.transform=`translate(${dx}px,${dy}px) rotate(${dir*72}deg)`;
+    await wait(290);
+    const st=document.createElement("div"); st.className="stream"; st.style.background=color;
+    const sh=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sh"));
+    const surface = dr.bottom - 5 - next[b].length*sh;
+    st.style.left=(tx-3)+"px"; st.style.top=(ty-2)+"px"; st.style.height=Math.max(8,surface-ty+2)+"px";
+    document.body.appendChild(st); void st.offsetWidth; st.classList.add("on");
+    await wait(130);
+    commit(a,b,next);
+    await wait(230);
+    st.classList.remove("on"); await wait(140); st.remove();
+    src.style.transform=""; await wait(290);
+    src.style.zIndex=""; src.style.transition="";
+  } else {
+    commit(a,b,next);
+  }
+  busy=false; paint();
+  if(isWon(S.tubes)) setTimeout(showWin, reduce?0:250);
+  else if(!anyMove()) toast("動かせる手がありません。戻すか試験管＋1を使ってください");
+}
+function commit(a,b,next){
+  S.history.push(S.tubes.map(t=>t.slice()));
+  S.tubes=next; S.moves++; sel=-1; paint();
+}
+function anyMove(){
+  for(let a=0;a<S.tubes.length;a++) for(let b=0;b<S.tubes.length;b++)
+    if(canPour(S.tubes,a,b) && !(solvedTube(S.tubes[a]))) return true;
+  return false;
+}
+
+function showWin(){
+  const k=Math.min(COLORS.length,S.level+2);
+  $("dots").innerHTML=COLORS.slice(0,k).map(c=>`<i style="background:${c}"></i>`).join("");
+  $("winText").textContent=`レベル ${S.level} を ${S.moves} 手でクリア`;
+  $("win").hidden=false; $("bNext").focus();
+  saveLevel(S.level+1);
+}
+function newLevel(level){
+  const T=generate(level);
+  S={level, tubes:T, init:T.map(t=>t.slice()), history:[], moves:0, added:false};
+  sel=-1; saveLevel(level); build();
+}
+
+$("bUndo").onclick=()=>{ if(busy||!S.history.length) return; S.tubes=S.history.pop(); S.moves++; sel=-1;
+  if(S.tubes.length<tubeEls.length) build(); else paint(); };
+$("bReset").onclick=()=>{ if(busy) return; S.tubes=S.init.map(t=>t.slice()); S.history=[]; S.moves=0; S.added=false; sel=-1; build(); };
+$("bAdd").onclick=()=>{ if(busy||S.added) return; S.history.push(S.tubes.map(t=>t.slice())); S.tubes.push([]); S.added=true; sel=-1; build(); toast("空の試験管を追加しました"); };
+$("bHint").onclick=()=>{
+  if(busy) return;
+  const path=solve(S.tubes, 150000);
+  if(!path){ toast("このままでは解けないかも。戻すか試験管＋1を試してください"); return; }
+  if(!path.length) return;
+  const [a,b]=path[0]; sel=-1; paint();
+  [a,b].forEach(i=>{ const el=tubeEls[i]; el.classList.remove("hint"); void el.offsetWidth; el.classList.add("hint"); });
+  toast(`${a+1}番 → ${b+1}番 に注ぐ`);
+};
+$("bNext").onclick=()=>{ $("win").hidden=true; newLevel(S.level+1); };
+
+let rt; addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(!busy) build(); },120); });
+
+function start(data){
+  if(data && data.S && Array.isArray(data.S.tubes)){ S=data.S; sel=-1; build(); }
+  else newLevel(loadLevel());
+}
+window.claude?.hot?.snapshot?.(()=>({S}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body></html>
