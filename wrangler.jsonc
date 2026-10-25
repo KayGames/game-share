@@ -1,0 +1,8 @@
+// Cloudflare Workers の設定（ビルドコマンド sh scripts/build-site.sh が作った _site を配信する）
+{
+  "name": "game-share",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./_site"
+  }
+}
