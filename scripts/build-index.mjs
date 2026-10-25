@@ -97,7 +97,8 @@ if (existsSync(GAMES_DIR)) {
     games.push({
       id,
       title: json.title || html.title || id,
-      author: json.author || html.author || info.author || "不明",
+      // Git のコミット作者名は GitHub アカウント名なので表示に使わない
+      author: json.author || html.author || "ななし",
       description: json.description || html.description || "",
       tags: Array.isArray(json.tags) ? json.tags : [],
       url: entry.replace(/\\/g, "/"),

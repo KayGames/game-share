@@ -29,18 +29,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: games.json を生成
-        run: node scripts/build-index.mjs
-
-      - name: 公開用ファイルをまとめる
+      - name: 公開用ファイルを作る
         run: |
-          mkdir _site
-          cp index.html games.json _site/
-          cp -r games _site/
+          sh scripts/build-site.sh
           touch _site/.nojekyll
-
-      - name: 検索エンジンに載らないようにする
-        run: node scripts/add-noindex.mjs _site
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
